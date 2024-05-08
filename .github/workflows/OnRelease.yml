@@ -10,25 +10,22 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: move to "python" directory
-      run: cd python
-
     - name: setup Python 3.12
       uses: actions/setup-python@v5
       with:
         python-version: 3.12 
     
+    - name: Update pip
+      run: python -m pip install --upgrade pip
+    
     - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
+      run: pip install -r python/requirements.txt
 
     - name: Set Package version to tag of release
       run: sed -i "s/{version}/${{ github.event.release.tag_name }}/g" pyproject.toml
 
     - name: Build
-      run: |
-        python -m build
+      run: python -m build python
 
     - name: Publish
       uses: AButler/upload-release-assets@v3.0

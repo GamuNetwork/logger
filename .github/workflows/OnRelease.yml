@@ -22,7 +22,7 @@ jobs:
       run: pip install -r python/requirements.txt
 
     - name: Set Package version to tag of release
-      run: sed -i "s/{version}/${{ github.event.release.tag_name }}/g" pyproject.toml
+      run: sed -i "s/{version}/${{ github.event.release.tag_name }}/g" python/pyproject.toml
 
     - name: Build
       run: python -m build python

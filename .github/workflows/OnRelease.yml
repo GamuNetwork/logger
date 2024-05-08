@@ -1,0 +1,37 @@
+name: On Release
+on:
+  release:
+    types: [published]
+
+jobs:
+  build-python:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: move to "python" directory
+      run: cd python
+
+    - name: setup Python 3.12
+      uses: actions/setup-python@v5
+      with:
+        python-version: 3.12 
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Set Package version to tag of release
+      run: sed -i "s/{version}/${{ github.event.release.tag_name }}/g" pyproject.toml
+
+    - name: Build
+      run: |
+        python -m build
+
+    - name: Publish
+      uses: AButler/upload-release-assets@v3.0
+      with:
+        files: "dist/*"
+        repo-token: ${{ secrets.GITHUB_TOKEN }}

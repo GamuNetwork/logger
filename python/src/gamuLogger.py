@@ -2,6 +2,7 @@ from enum import Enum
 from sys import stdout, stderr
 from datetime import datetime
 from typing import Any, Callable
+import argparse
 
 class COLORS(Enum):
     """
@@ -177,6 +178,21 @@ class Printer:
         message = self.__hide_sensitive(message)
         print(color + message + COLORS.RESET, file=self.target)
 
+    def __config_argparse(self, parser : argparse.ArgumentParser):
+        log_group = parser.add_argument_group("Logging options")
+        log_group.add_argument("--log-level", type=str, default="INFO", help="Set the logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)", choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"])
+        log_group.add_argument("--log-target", type=argparse.FileType('w'), default=stdout, help="Set the logging target (default: stdout)")
+        log_group.add_argument("--log-sensitive", type=str, default="HIDE", help="Set the sensitive data display mode (HIDE, SHOW, ENCODE)", choices=["HIDE", "SHOW", "ENCODE"])
+
+
+    def __parse_args(self, args : argparse.Namespace):
+        if args.log_level:
+            self.set_level(self.LEVELS.from_string(args.log_level))
+        if args.log_target:
+            self.set_target(args.log_target)
+        if args.log_sensitive:
+            self.show_sensitive(args.log_sensitive)
+
     @staticmethod
     def deep_debug(message : Any, dateColor : COLORS = COLORS.BLUE):
         Printer().__deep_debug(message, dateColor)
@@ -221,6 +237,15 @@ class Printer:
     def add_sensitive(sensitive : Any):
         Printer().__add_sensitive(sensitive)
         
+    @staticmethod
+    def config_argparse(parser : argparse.ArgumentParser):
+        Printer().__config_argparse(parser)
+        
+    @staticmethod
+    def parse_args(args : argparse.Namespace):
+        Printer().__parse_args(args)
+    
+            
 def deep_debug(message : Any, dateColor : COLORS = COLORS.BLUE):
     Printer.deep_debug(message, dateColor)
         
@@ -248,12 +273,12 @@ def message(message : Any, color : COLORS = COLORS.NONE):
     Printer.message(message, color)
     
     
-def deep_debug_func(func : Callable):
+def deep_debug_func(chrono : bool = False):
     """
     Decorator to print deep debug messages before and after the function call
     usage:
     ```python
-    @deep_debug_func
+    @deep_debug_func(chrono=False)
     def my_function(arg1, arg2, kwarg1=None):
         return arg1+arg2
         
@@ -267,14 +292,22 @@ def deep_debug_func(func : Callable):
     
     note: this decorator does nothing if the Printer level is not set to deep debug
     """
-    def wrapper(*args, **kwargs):
-        deep_debug(f"Calling {func.__name__} with\nargs: {args}\nkwargs: {kwargs}")
-        result = func(*args, **kwargs)
-        deep_debug(f"Function {func.__name__} returned \"{result}\"")
-        return result
-    return wrapper
+    def pre_wrapper(func : Callable):
+        def wrapper(*args, **kwargs):
+            deep_debug(f"Calling {func.__name__} with\nargs: {args}\nkwargs: {kwargs}")
+            if chrono:
+                start = datetime.now()
+            result = func(*args, **kwargs)
+            if chrono:
+                end = datetime.now()
+                deep_debug(f"Function {func.__name__} took {end-start} to execute and returned \"{result}\"")
+            else:
+                deep_debug(f"Function {func.__name__} returned \"{result}\"")
+            return result
+        return wrapper
+    return pre_wrapper
 
-def debug_func(func : Callable):
+def debug_func(chrono : bool = False):
     """
     Decorator to print deep debug messages before and after the function call
     usage:
@@ -293,12 +326,20 @@ def debug_func(func : Callable):
     
     note: this decorator does nothing if the Printer level is not set to debug or deep debug
     """
-    def wrapper(*args, **kwargs):
-        debug(f"Calling {func.__name__} with args: {args} and kwargs: {kwargs}")
-        result = func(*args, **kwargs)
-        debug(f"Function {func.__name__} returned {result}")
-        return result
-    return wrapper
+    def pre_wrapper(func : Callable):
+        def wrapper(*args, **kwargs):
+            debug(f"Calling {func.__name__} with\nargs: {args} and\nkwargs: {kwargs}")
+            if chrono:
+                start = datetime.now()
+            result = func(*args, **kwargs)
+            if chrono:
+                end = datetime.now()
+                debug(f"Function {func.__name__} took {end-start} to execute and returned \"{result}\"")
+            else:
+                debug(f"Function {func.__name__} returned \"{result}\"")
+            return result
+        return wrapper
+    return pre_wrapper
 
 def chrono(func : Callable):
     """

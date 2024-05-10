@@ -16,5 +16,8 @@
     "Logger"
   ],
   "author": "Antoine Buirey, GamuNetwork",
-  "license": "ISC"
+  "license": "ISC",
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com/"
+  }
 }

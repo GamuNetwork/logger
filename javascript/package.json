@@ -1,6 +1,6 @@
 {
   "name": "@gamunetwork/logger",
-  "version": "{version}",
+  "version": "0.2.0",
   "description": "This is a logger module, allowing to create beautiful log very easily",
   "main": "index.mjs",
   "scripts": {

@@ -32,3 +32,24 @@ jobs:
       with:
         files: "python/dist/*"
         repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+  build-javascript:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '16'
+
+    - name: Install dependencies
+      run: npm install --prefix javascript
+
+    - name: Set Package version to tag of release
+      run: sed -i "s/{version}/${{ github.event.release.tag_name }}/g" javascript/package.json
+      run: sed -i "s/{version}/${{ github.event.release.tag_name }}/g" javascript/package-lock.json
+
+    - name: publish
+      run: npm publish --prefix javascript

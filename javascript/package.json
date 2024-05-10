@@ -1,0 +1,20 @@
+{
+  "name": "@gamunetwork/logger",
+  "version": "{version}",
+  "description": "This is a logger module, allowing to create beautiful log very easily",
+  "main": "index.mjs",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/GamuNetwork/logger.git"
+  },
+  "keywords": [
+    "Gamu",
+    "GamuNetwork",
+    "Logger"
+  ],
+  "author": "Antoine Buirey, GamuNetwork",
+  "license": "ISC"
+}

@@ -47,9 +47,8 @@ jobs:
     - name: Install dependencies
       run: npm install --prefix javascript
 
-    - name: Set Package version to tag of release
-      run: sed -i "s/{version}/${{ github.event.release.tag_name }}/g" javascript/package.json
-      run: sed -i "s/{version}/${{ github.event.release.tag_name }}/g" javascript/package-lock.json
+    - run: sed -i "s/{version}/${{ github.event.release.tag_name }}/g" javascript/package.json
+    - run: sed -i "s/{version}/${{ github.event.release.tag_name }}/g" javascript/package-lock.json
 
     - name: publish
       run: npm publish --prefix javascript

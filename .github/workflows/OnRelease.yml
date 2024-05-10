@@ -1,11 +1,8 @@
 name: On Release
 on:
-  # release:
-  #   types: [published]
-  #for testing, do it on push
-  push:
-    branches:
-      - main
+  release:
+    types: [published]
+
 
 jobs:
   build-python:

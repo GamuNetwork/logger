@@ -44,16 +44,18 @@ jobs:
     - uses: actions/checkout@v4
 
     - name: Install Node.js
-      uses: actions/setup-node@v3
+      uses: actions/setup-node@v4
       with:
-        node-version: '16'
-
+        node-version: 16
+        registry-url: https://npm.pkg.github.com/
 
     - name: Install dependencies
-      run: cd javascript && npm install
+      run: cd javascript && npm ci
 
     - run: sed -i "s/{version}/${{ github.event.release.tag_name }}/g" javascript/package.json
     - run: sed -i "s/{version}/${{ github.event.release.tag_name }}/g" javascript/package-lock.json
 
     - name: publish
       run: cd javascript && npm publish
+      env:
+        NODE_AUTH_TOKEN: ${{secrets.GITHUB_TOKEN}}

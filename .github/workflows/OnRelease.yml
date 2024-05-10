@@ -1,7 +1,11 @@
 name: On Release
 on:
-  release:
-    types: [published]
+  # release:
+  #   types: [published]
+  #for testing, do it on push
+  push:
+    branches:
+      - main
 
 jobs:
   build-python:
@@ -44,11 +48,14 @@ jobs:
       with:
         node-version: '16'
 
+    - name: go to javascript directory
+      run: cd javascript
+
     - name: Install dependencies
-      run: npm install --prefix javascript
+      run: npm install
 
     - run: sed -i "s/{version}/${{ github.event.release.tag_name }}/g" javascript/package.json
     - run: sed -i "s/{version}/${{ github.event.release.tag_name }}/g" javascript/package-lock.json
 
     - name: publish
-      run: npm publish --prefix javascript
+      run: npm publish

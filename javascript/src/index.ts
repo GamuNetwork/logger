@@ -12,16 +12,15 @@ enum COLORS{
     NONE = ""
 }
 
-enum LEVELS{
-    DEEP_DEBUG = 0,
-    DEBUG = 1,
-    INFO = 2,
-    WARNING = 3,
-    ERROR = 4,
-    CRITICAL = 5
-}
-
 namespace LEVELS{
+    export enum LEVELS {
+        DEEP_DEBUG = 0,
+        DEBUG = 1,
+        INFO = 2,
+        WARNING = 3,
+        ERROR = 4,
+        CRITICAL = 5
+    }
     export function toString(level : LEVELS){
         switch(level){
             case LEVELS.DEEP_DEBUG:
@@ -66,11 +65,11 @@ enum SENSITIVE_LEVELS{
 class Logger{
     static _instance = new Logger();
 
-    private _level : LEVELS = LEVELS.INFO;
+    private _level : LEVELS.LEVELS = LEVELS.LEVELS.INFO;
     private _target : Function = console.log;
     private _sensitive_level : SENSITIVE_LEVELS = SENSITIVE_LEVELS.HIDE;
     private _sensitive_data : string[] = [];
-    private _module_map : Record<string, string> = {};
+    private _module_map : Record<string, string> = {}; // filepath -> module name
 
     constructor(){
         if(Logger._instance){
@@ -78,18 +77,12 @@ class Logger{
         }
         Logger._instance = this;
 
-        this._level = LEVELS.INFO;
-        this._target = console.log; // default target, can be a file path
-        this._sensitive_level = SENSITIVE_LEVELS.HIDE;
-        this._sensitive_data = [];
-        this._module_map = {}; // filepath -> module name
-
         return this;
     }
 
 // ----------------- CONFIGURATION METHODS -----------------
 
-    static setLevel(level: LEVELS){
+    static setLevel(level: LEVELS.LEVELS){
         Logger._instance._level = level;
     }
 
@@ -131,7 +124,7 @@ class Logger{
 
 // ------------------- INTERNAL METHODS --------------------
 
-    static #log(level : LEVELS, message : string, filename : string){
+    static #log(level : LEVELS.LEVELS, message : string, filename : string){
         if(Logger._instance._level <= level){
         Logger._instance._target(Logger.#format(level, message, filename));
         }
@@ -144,7 +137,7 @@ class Logger{
         return message; // no color support for file output
     }
 
-    static #format(level : LEVELS, message : string, filename : string){
+    static #format(level : LEVELS.LEVELS, message : string, filename : string){
         let moduleName = Logger._instance._module_map[filename];
         let indent = 33 + (moduleName ? 15 : 0);
         message = replaceNewLine(message, indent);
@@ -163,27 +156,27 @@ class Logger{
     }
 
     static deepDebug(message : string, filename = GetCallerInfo()){
-        Logger.#log(LEVELS.DEEP_DEBUG, message, filename);
+        Logger.#log(LEVELS.LEVELS.DEEP_DEBUG, message, filename);
     }
 
     static debug(message : string, filename = GetCallerInfo()){
-        Logger.#log(LEVELS.DEBUG, message, filename);
+        Logger.#log(LEVELS.LEVELS.DEBUG, message, filename);
     }
     
     static info(message : string, filename = GetCallerInfo()){
-        Logger.#log(LEVELS.INFO, message, filename);
+        Logger.#log(LEVELS.LEVELS.INFO, message, filename);
     }
 
     static warning(message : string, filename = GetCallerInfo()){
-        Logger.#log(LEVELS.WARNING, message, filename);
+        Logger.#log(LEVELS.LEVELS.WARNING, message, filename);
     }
 
     static error(message : string, filename = GetCallerInfo()){
-        Logger.#log(LEVELS.ERROR, message, filename);
+        Logger.#log(LEVELS.LEVELS.ERROR, message, filename);
     }
 
     static critical(message : string, filename = GetCallerInfo()){
-        Logger.#log(LEVELS.CRITICAL, message, filename);
+        Logger.#log(LEVELS.LEVELS.CRITICAL, message, filename);
     }
 }
 

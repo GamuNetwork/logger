@@ -2,9 +2,10 @@
   "name": "@gamunetwork/logger",
   "version": "{version}",
   "description": "This is a logger module, allowing to create beautiful log very easily",
-  "main": "index.mjs",
+  "main": "dist/index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "tsc"
   },
   "repository": {
     "type": "git",
@@ -19,5 +20,9 @@
   "license": "ISC",
   "publishConfig": {
     "registry": "https://npm.pkg.github.com/"
+  },
+  "dependencies": {
+    "typescript": "^5.4.5",
+    "@types/node": "^16.11.15"
   }
 }

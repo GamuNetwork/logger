@@ -95,7 +95,7 @@ class Logger{
 
     static setTarget(target: any){
         // target can be either a function or a file path; if it's a file path, it will be created if it doesn't exist
-        if(target instanceof String){
+        if(typeof target === 'string'){
             // create the file if it doesn't exist, clear it if it does
             let path = target.toString();
             if(fs.existsSync(path)){
@@ -106,7 +106,7 @@ class Logger{
                 fs.appendFileSync(path, message + '\n');
             }
         }
-        else if(target instanceof Function){
+        else if(typeof target === 'function'){
             Logger._instance._target = target;
         }
         else{
@@ -138,10 +138,10 @@ class Logger{
     }
 
     static colorString(color : COLORS, message : string){
-        if(Logger._instance._target != console.log){
-            return message; // no color support for file output
+        if(Logger._instance._target === console.log){
+            return color.toString() + message + COLORS.RESET.toString();
         }
-        return color.toString() + message + COLORS.RESET.toString();
+        return message; // no color support for file output
     }
 
     static #format(level : LEVELS, message : string, filename : string){
@@ -159,7 +159,7 @@ class Logger{
 // ------------------- LOGGING METHODS ---------------------
 
     static message(message : string, color = COLORS.NONE){
-        Logger._instance._target(color.toString() + message + COLORS.RESET.toString());
+        Logger._instance._target(Logger.colorString(color, message));
     }
 
     static deepDebug(message : string, filename = GetCallerInfo()){

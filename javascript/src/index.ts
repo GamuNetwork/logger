@@ -21,6 +21,25 @@ namespace LEVELS{
         ERROR = 4,
         CRITICAL = 5
     }
+
+    export function name(level : LEVELS){
+        switch(level){
+            case LEVELS.DEEP_DEBUG:
+                return "DEEP_DEBUG";
+            case LEVELS.DEBUG:
+                return "DEBUG";
+            case LEVELS.INFO:
+                return "INFO";
+            case LEVELS.WARNING:
+                return "WARNING";
+            case LEVELS.ERROR:
+                return "ERROR";
+            case LEVELS.CRITICAL:
+                return "CRITICAL";
+        }
+        
+    }
+
     export function toString(level : LEVELS){
         switch(level){
             case LEVELS.DEEP_DEBUG:

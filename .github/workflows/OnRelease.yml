@@ -49,7 +49,7 @@ jobs:
     - name: Install dependencies
       run: cd javascript && npm ci
 
-    - name build
+    - name: build
       run: cd javascript && npm run build
 
     - run: sed -i "s/{version}/${{ github.event.release.tag_name }}/g" javascript/package.json

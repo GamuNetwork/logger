@@ -143,3 +143,6 @@ This is a message
 [ current datetime ] [   INFO   ] This is an info message
 ```
 > if written in a file, the color parameter will be ignored.
+
+## Issue
+If you encounter any problem, please let us know by creating an issue here, on github !

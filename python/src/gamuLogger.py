@@ -3,7 +3,7 @@ from sys import stdout, stderr
 from datetime import datetime
 from typing import Any, Callable
 import argparse
-from utils import getCallerInfo, getTime, parseMessage
+from utils import getCallerInfo, getTime, replaceNewLine, centerString
 
 class COLORS(Enum):
     """
@@ -112,14 +112,22 @@ class Printer:
             cls.__instance.target = stdout
             cls.__instance.show_sensitive_data = cls.SENSITIVE_LEVELS.HIDE
             cls.__instance.sensitive_data = [] # list of sensitive data that should not be printed
+            cls.__instance.moduleMap = {} # key : filename, value : module name
         return cls.__instance
             
-    def __build_message(self, level : LEVELS, message : str):
+    def __build_message(self, level : LEVELS, message : str, filename : str):
+        result = ""
         if self.target == stderr or self.target == stdout:
-            return f"[{str(COLORS.BLUE)}{getTime()}{str(COLORS.RESET)}] [{level.color()}{level}{str(COLORS.RESET)}] {parseMessage(message)}"
+            result += f"[{str(COLORS.BLUE)}{getTime()}{str(COLORS.RESET)}] [{level.color()}{level}{str(COLORS.RESET)}]"
         else:
             # if the target is a file, we don't need to color the output
-            return f"[{getTime()}] [{level}] {parseMessage(message)}"
+            result += f"[{getTime()}] [{level}]"
+        
+        if filename in self.moduleMap:
+            result += f" [ {centerString(self.moduleMap[filename], 10)} ]"
+            
+        result += " " + replaceNewLine(message, 33 + (15 if filename in self.moduleMap else 0))
+        return result
         
     def __hide_sensitive(self, message : str):
         if self.show_sensitive_data == self.SENSITIVE_LEVELS.HIDE:
@@ -130,35 +138,35 @@ class Printer:
                 message = message.replace(str(sensitive), str(sensitive).encode().hex()) #transform "sensitive" into "73656e736974697665"
         return message
     
-    def __print(self, level : LEVELS, message : Any):
+    def __print(self, level : LEVELS, message : Any, filename = ""):
         message = str(message)
         message = self.__hide_sensitive(message)
         if self.level <= level:
-            print(self.__build_message(level, message), file=self.target)
+            print(self.__build_message(level, message, filename), file=self.target)
 
     @staticmethod
-    def deep_debug(message : Any):
-        Printer().__print(Printer.LEVELS.DEEP_DEBUG, message)
+    def deep_debug(message : Any, filename = getCallerInfo()):
+        Printer().__print(Printer.LEVELS.DEEP_DEBUG, message, filename)
 
     @staticmethod
-    def debug(message : Any):
-        Printer().__print(Printer.LEVELS.DEBUG, message)
+    def debug(message : Any, filename = getCallerInfo()):
+        Printer().__print(Printer.LEVELS.DEBUG, message, filename)
     
     @staticmethod
-    def info(message : Any):
-        Printer().__print(Printer.LEVELS.INFO, message)
+    def info(message : Any, filename = getCallerInfo()):
+        Printer().__print(Printer.LEVELS.INFO, message, getCallerInfo())
     
     @staticmethod
-    def warning(message : Any):
-        Printer().__print(Printer.LEVELS.WARNING, message)
+    def warning(message : Any, filename = getCallerInfo()):
+        Printer().__print(Printer.LEVELS.WARNING, message, filename)
         
     @staticmethod
-    def error(message : Any):
-        Printer().__print(Printer.LEVELS.ERROR, message)
+    def error(message : Any, filename = getCallerInfo()):
+        Printer().__print(Printer.LEVELS.ERROR, message, filename)
         
     @staticmethod
-    def critical(message : Any):
-        Printer().__print(Printer.LEVELS.CRITICAL, message)
+    def critical(message : Any, filename = getCallerInfo()):
+        Printer().__print(Printer.LEVELS.CRITICAL, message, filename)
         
     @staticmethod
     def message(message : Any, color : COLORS = COLORS.NONE):
@@ -167,6 +175,10 @@ class Printer:
     @staticmethod
     def set_level(level : LEVELS):
         Printer().level = level
+        
+    @staticmethod
+    def set_module(name : str):
+        Printer().moduleMap[getCallerInfo()] = name
         
     @staticmethod
     def set_target(target):
@@ -203,22 +215,22 @@ class Printer:
     
             
 def deep_debug(message : Any):
-    Printer.deep_debug(message)
+    Printer.deep_debug(message, getCallerInfo())
         
 def debug(message : Any):
-    Printer.debug(message)
+    Printer.debug(message, getCallerInfo())
 
 def info(message : Any):
-    Printer.info(message)
+    Printer.info(message, getCallerInfo())
     
 def warning(message : Any):
-    Printer.warning(message)
+    Printer.warning(message, getCallerInfo())
     
 def error(message : Any):
-    Printer.error(message)
+    Printer.error(message, getCallerInfo())
 
 def critical(message : Any):
-    Printer.critical(message)
+    Printer.critical(message, getCallerInfo())
     
 def message(message : Any, color : COLORS = COLORS.NONE):
     """
@@ -329,5 +341,9 @@ if __name__ == '__main__':
     warning("Warning message")
     error("Error message")
     critical("Critical message")
+    info("This is a multi-line message\n\tThis is the second line\n\t\tThis is the third line")
     
+    Printer.set_module("TestModule")
+    
+    critical("Critical message")
     info("This is a multi-line message\n\tThis is the second line\n\t\tThis is the third line")

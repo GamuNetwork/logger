@@ -11,9 +11,11 @@ def getCallerInfo():
 def getTime():
     return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-def parseMessage(message : str):
-    return message.replace('\n', '\n' + ('\t' * 4)+' | ')
 
-if __name__ == "__main__":
-    print(getCallerInfo())
+def replaceNewLine(string : str, indent : int = 33):
+    return string.replace('\n', '\n' + (' ' * indent) + '| ')
+
+
+def centerString(string : str, length : int):
+    return string.center(length)
     

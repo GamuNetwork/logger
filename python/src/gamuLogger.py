@@ -3,6 +3,7 @@ from sys import stdout, stderr
 from datetime import datetime
 from typing import Any, Callable
 import argparse
+from utils import getCallerInfo, getTime, parseMessage
 
 class COLORS(Enum):
     """
@@ -112,34 +113,13 @@ class Printer:
             cls.__instance.show_sensitive_data = cls.SENSITIVE_LEVELS.HIDE
             cls.__instance.sensitive_data = [] # list of sensitive data that should not be printed
         return cls.__instance
-    
-    def __set_level(self, level : LEVELS):
-        self.level = level
-        
-    def __set_target(self, target):
-        self.target = target
-        
-    def __show_sensitive(self, mode : SENSITIVE_LEVELS):
-        self.show_sensitive_data = mode
-        if mode == self.SENSITIVE_LEVELS.SHOW:
-            Printer().__message("Sensitive mode was disable, this file may contain sensitive information, please do not share it with anyone", COLORS.YELLOW)
-        elif mode == self.SENSITIVE_LEVELS.ENCODE:
-            Printer().__message("Sensitive mode was enable, this file may contain encoded sensitive information, please do not share it with anyone", COLORS.YELLOW)
-        
-    def __add_sensitive(self, sensitive : Any):
-        self.sensitive_data.append(sensitive)
-        
-    @staticmethod
-    def __parse_message(message : str):
-        return message.replace('\n', '\n' + ('\t' * 4)+' | ')
-    
-    @staticmethod
-    def __get_time():
-        return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    
-    def __build_message(self, level : LEVELS, message : str, dateColor : COLORS = COLORS.BLUE):
+            
+    def __build_message(self, level : LEVELS, message : str):
         if self.target == stderr or self.target == stdout:
-            return f"[{str(dateColor)}{self.__get_time()}{str(COLORS.RESET)}] [{level.color()}{level}{str(COLORS.RESET)}] {self.__parse_message(message)}"
+            return f"[{str(COLORS.BLUE)}{getTime()}{str(COLORS.RESET)}] [{level.color()}{level}{str(COLORS.RESET)}] {parseMessage(message)}"
+        else:
+            # if the target is a file, we don't need to color the output
+            return f"[{getTime()}] [{level}] {parseMessage(message)}"
         
     def __hide_sensitive(self, message : str):
         if self.show_sensitive_data == self.SENSITIVE_LEVELS.HIDE:
@@ -150,119 +130,95 @@ class Printer:
                 message = message.replace(str(sensitive), str(sensitive).encode().hex()) #transform "sensitive" into "73656e736974697665"
         return message
     
-    def __print(self, level : LEVELS, message : Any, dateColor : COLORS = COLORS.BLUE):
+    def __print(self, level : LEVELS, message : Any):
         message = str(message)
         message = self.__hide_sensitive(message)
         if self.level <= level:
-            print(self.__build_message(level, message, dateColor), file=self.target)
-            
-    def __deep_debug(self, message : Any, dateColor : COLORS = COLORS.BLUE):
-        self.__print(self.LEVELS.DEEP_DEBUG, message, dateColor)
-            
-    def __debug(self, message : Any, dateColor : COLORS = COLORS.BLUE):
-        self.__print(self.LEVELS.DEBUG, message, dateColor)
-    
-    def __info(self, message : Any, dateColor : COLORS = COLORS.GREEN):
-        self.__print(self.LEVELS.INFO, message, dateColor)
-        
-    def __warning(self, message : Any, dateColor : COLORS = COLORS.YELLOW):
-        self.__print(self.LEVELS.WARNING, message, dateColor)
-        
-    def __error(self, message : Any, dateColor : COLORS = COLORS.RED):
-        self.__print(self.LEVELS.ERROR, message, dateColor)
-        
-    def __critical(self, message : Any, dateColor : COLORS = COLORS.DARK_RED):
-        self.__print(self.LEVELS.CRITICAL, message, dateColor)
-        
-    def __message(self, message : Any, color : COLORS = COLORS.NONE):
-        message = self.__hide_sensitive(message)
-        print(color + message + COLORS.RESET, file=self.target)
+            print(self.__build_message(level, message), file=self.target)
 
-    def __config_argparse(self, parser : argparse.ArgumentParser):
+    @staticmethod
+    def deep_debug(message : Any):
+        Printer().__print(Printer.LEVELS.DEEP_DEBUG, message)
+
+    @staticmethod
+    def debug(message : Any):
+        Printer().__print(Printer.LEVELS.DEBUG, message)
+    
+    @staticmethod
+    def info(message : Any):
+        Printer().__print(Printer.LEVELS.INFO, message)
+    
+    @staticmethod
+    def warning(message : Any):
+        Printer().__print(Printer.LEVELS.WARNING, message)
+        
+    @staticmethod
+    def error(message : Any):
+        Printer().__print(Printer.LEVELS.ERROR, message)
+        
+    @staticmethod
+    def critical(message : Any):
+        Printer().__print(Printer.LEVELS.CRITICAL, message)
+        
+    @staticmethod
+    def message(message : Any, color : COLORS = COLORS.NONE):
+        Printer().__print(Printer.LEVELS.INFO, f"{color}{message}{COLORS.RESET}")
+        
+    @staticmethod
+    def set_level(level : LEVELS):
+        Printer().level = level
+        
+    @staticmethod
+    def set_target(target):
+        Printer().target = target
+        
+    @staticmethod
+    def show_sensitive(mode : SENSITIVE_LEVELS):
+        Printer().show_sensitive_data = mode
+        if mode == Printer().SENSITIVE_LEVELS.SHOW:
+            Printer().__message("Sensitive mode was disable, this file may contain sensitive information, please do not share it with anyone", COLORS.YELLOW)
+        elif mode == Printer().SENSITIVE_LEVELS.ENCODE:
+            Printer().__message("Sensitive mode was enable, this file may contain encoded sensitive information, please do not share it with anyone", COLORS.YELLOW)
+        
+    @staticmethod
+    def add_sensitive(sensitive : Any):
+        Printer().sensitive_data.append(sensitive)
+        
+    @staticmethod
+    def config_argparse(parser : argparse.ArgumentParser):
         log_group = parser.add_argument_group("Logging options")
         log_group.add_argument("--log-level", type=str, default="INFO", help="Set the logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)", choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"])
         log_group.add_argument("--log-target", type=argparse.FileType('w'), default=stdout, help="Set the logging target (default: stdout)")
         log_group.add_argument("--log-sensitive", type=str, default="HIDE", help="Set the sensitive data display mode (HIDE, SHOW, ENCODE)", choices=["HIDE", "SHOW", "ENCODE"])
-
-
-    def __parse_args(self, args : argparse.Namespace):
+        
+    @staticmethod
+    def parse_args(args : argparse.Namespace):
+        self = Printer()
         if args.log_level:
             self.set_level(self.LEVELS.from_string(args.log_level))
         if args.log_target:
             self.set_target(args.log_target)
         if args.log_sensitive:
             self.show_sensitive(args.log_sensitive)
-
-    @staticmethod
-    def deep_debug(message : Any, dateColor : COLORS = COLORS.BLUE):
-        Printer().__deep_debug(message, dateColor)
-
-    @staticmethod
-    def debug(message : Any, dateColor : COLORS = COLORS.BLUE):
-        Printer().__debug(message, dateColor)
-    
-    @staticmethod
-    def info(message : Any, dateColor : COLORS = COLORS.BLUE):
-        Printer().__info(message, dateColor)
-    
-    @staticmethod
-    def warning(message : Any, dateColor : COLORS = COLORS.BLUE):
-        Printer().__warning(message, dateColor)
-        
-    @staticmethod
-    def error(message : Any, dateColor : COLORS = COLORS.BLUE):
-        Printer().__error(message, dateColor)
-        
-    @staticmethod
-    def critical(message : Any, dateColor : COLORS = COLORS.BLUE):
-        Printer().__critical(message, dateColor)
-        
-    @staticmethod
-    def message(message : Any, color : COLORS = COLORS.NONE):
-        Printer().__message(message, color)
-        
-    @staticmethod
-    def set_level(level : LEVELS):
-        Printer().__set_level(level)
-        
-    @staticmethod
-    def set_target(target):
-        Printer().__set_target(target)
-        
-    @staticmethod
-    def show_sensitive(mode : SENSITIVE_LEVELS):
-        Printer().__show_sensitive(mode)
-        
-    @staticmethod
-    def add_sensitive(sensitive : Any):
-        Printer().__add_sensitive(sensitive)
-        
-    @staticmethod
-    def config_argparse(parser : argparse.ArgumentParser):
-        Printer().__config_argparse(parser)
-        
-    @staticmethod
-    def parse_args(args : argparse.Namespace):
-        Printer().__parse_args(args)
     
             
-def deep_debug(message : Any, dateColor : COLORS = COLORS.BLUE):
-    Printer.deep_debug(message, dateColor)
+def deep_debug(message : Any):
+    Printer.deep_debug(message)
         
-def debug(message : Any, dateColor : COLORS = COLORS.BLUE):
-    Printer.debug(message, dateColor)
+def debug(message : Any):
+    Printer.debug(message)
 
-def info(message : Any, dateColor : COLORS = COLORS.BLUE):
-    Printer.info(message, dateColor)
+def info(message : Any):
+    Printer.info(message)
     
-def warning(message : Any, dateColor : COLORS = COLORS.BLUE):
-    Printer.warning(message, dateColor)
+def warning(message : Any):
+    Printer.warning(message)
     
-def error(message : Any, dateColor : COLORS = COLORS.BLUE):
-    Printer.error(message, dateColor)
+def error(message : Any):
+    Printer.error(message)
 
-def critical(message : Any, dateColor : COLORS = COLORS.BLUE):
-    Printer.critical(message, dateColor)
+def critical(message : Any):
+    Printer.critical(message)
     
 def message(message : Any, color : COLORS = COLORS.NONE):
     """
@@ -366,7 +322,8 @@ def chrono(func : Callable):
     return wrapper
 
 if __name__ == '__main__':
-    Printer.set_level(Printer.LEVELS.DEBUG)
+    Printer.set_level(Printer.LEVELS.DEEP_DEBUG)
+    deep_debug("Deep debug message")
     debug({"key": "value", "key2": "value2"})
     info("Info message")
     warning("Warning message")

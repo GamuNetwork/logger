@@ -34,7 +34,7 @@ class COLORS(Enum):
     def __repr__(self):
         return self.value
 
-class Printer:
+class Logger:
     class LEVELS(Enum):
         DEEP_DEBUG = 0  # this level is used to print very detailed information, it may contain sensitive information
         DEBUG = 1       # this level is used to print debug information, it may contain sensitive information
@@ -48,31 +48,31 @@ class Printer:
         def from_string(level):
             match level.lower():
                 case 'debug':
-                    return Printer.LEVELS.DEBUG
+                    return Logger.LEVELS.DEBUG
                 case 'info':
-                    return Printer.LEVELS.INFO
+                    return Logger.LEVELS.INFO
                 case 'warning':
-                    return Printer.LEVELS.WARNING
+                    return Logger.LEVELS.WARNING
                 case 'error':
-                    return Printer.LEVELS.ERROR
+                    return Logger.LEVELS.ERROR
                 case 'critical':
-                    return Printer.LEVELS.CRITICAL
+                    return Logger.LEVELS.CRITICAL
                 case _:
-                    return Printer.LEVELS.INFO
+                    return Logger.LEVELS.INFO
 
         def __str__(self):
             match self:
-                case Printer.LEVELS.DEEP_DEBUG:
+                case Logger.LEVELS.DEEP_DEBUG:
                     return '  DEBUG   '
-                case Printer.LEVELS.DEBUG:
+                case Logger.LEVELS.DEBUG:
                     return '  DEBUG   '
-                case Printer.LEVELS.INFO:
+                case Logger.LEVELS.INFO:
                     return '   INFO   '
-                case Printer.LEVELS.WARNING:
+                case Logger.LEVELS.WARNING:
                     return ' WARNING  '
-                case Printer.LEVELS.ERROR:
+                case Logger.LEVELS.ERROR:
                     return '  ERROR   '
-                case Printer.LEVELS.CRITICAL:
+                case Logger.LEVELS.CRITICAL:
                     return ' CRITICAL '
         
         def __int__(self):
@@ -83,17 +83,17 @@ class Printer:
     
         def color(self) -> COLORS:
             match self:
-                case Printer.LEVELS.DEEP_DEBUG:
+                case Logger.LEVELS.DEEP_DEBUG:
                     return COLORS.BLUE
-                case Printer.LEVELS.DEBUG:
+                case Logger.LEVELS.DEBUG:
                     return COLORS.BLUE
-                case Printer.LEVELS.INFO:
+                case Logger.LEVELS.INFO:
                     return COLORS.GREEN
-                case Printer.LEVELS.WARNING:
+                case Logger.LEVELS.WARNING:
                     return COLORS.YELLOW
-                case Printer.LEVELS.ERROR:
+                case Logger.LEVELS.ERROR:
                     return COLORS.RED
-                case Printer.LEVELS.CRITICAL:
+                case Logger.LEVELS.CRITICAL:
                     return COLORS.DARK_RED
                 case _:
                     return COLORS.RESET
@@ -107,7 +107,7 @@ class Printer:
     
     def __new__(cls):
         if cls.__instance is None:
-            cls.__instance = super(Printer, cls).__new__(cls)
+            cls.__instance = super(Logger, cls).__new__(cls)
             cls.__instance.level = cls.LEVELS.INFO
             cls.__instance.target = stdout
             cls.__instance.show_sensitive_data = cls.SENSITIVE_LEVELS.HIDE
@@ -146,55 +146,55 @@ class Printer:
 
     @staticmethod
     def deep_debug(message : Any, filename = getCallerInfo()):
-        Printer().__print(Printer.LEVELS.DEEP_DEBUG, message, filename)
+        Logger().__print(Logger.LEVELS.DEEP_DEBUG, message, filename)
 
     @staticmethod
     def debug(message : Any, filename = getCallerInfo()):
-        Printer().__print(Printer.LEVELS.DEBUG, message, filename)
+        Logger().__print(Logger.LEVELS.DEBUG, message, filename)
     
     @staticmethod
     def info(message : Any, filename = getCallerInfo()):
-        Printer().__print(Printer.LEVELS.INFO, message, getCallerInfo())
+        Logger().__print(Logger.LEVELS.INFO, message, getCallerInfo())
     
     @staticmethod
     def warning(message : Any, filename = getCallerInfo()):
-        Printer().__print(Printer.LEVELS.WARNING, message, filename)
+        Logger().__print(Logger.LEVELS.WARNING, message, filename)
         
     @staticmethod
     def error(message : Any, filename = getCallerInfo()):
-        Printer().__print(Printer.LEVELS.ERROR, message, filename)
+        Logger().__print(Logger.LEVELS.ERROR, message, filename)
         
     @staticmethod
     def critical(message : Any, filename = getCallerInfo()):
-        Printer().__print(Printer.LEVELS.CRITICAL, message, filename)
+        Logger().__print(Logger.LEVELS.CRITICAL, message, filename)
         
     @staticmethod
     def message(message : Any, color : COLORS = COLORS.NONE):
-        Printer().__print(Printer.LEVELS.INFO, f"{color}{message}{COLORS.RESET}")
+        Logger().__print(Logger.LEVELS.INFO, f"{color}{message}{COLORS.RESET}")
         
     @staticmethod
     def set_level(level : LEVELS):
-        Printer().level = level
+        Logger().level = level
         
     @staticmethod
     def set_module(name : str):
-        Printer().moduleMap[getCallerInfo()] = name
+        Logger().moduleMap[getCallerInfo()] = name
         
     @staticmethod
     def set_target(target):
-        Printer().target = target
+        Logger().target = target
         
     @staticmethod
     def show_sensitive(mode : SENSITIVE_LEVELS):
-        Printer().show_sensitive_data = mode
-        if mode == Printer().SENSITIVE_LEVELS.SHOW:
-            Printer().__message("Sensitive mode was disable, this file may contain sensitive information, please do not share it with anyone", COLORS.YELLOW)
-        elif mode == Printer().SENSITIVE_LEVELS.ENCODE:
-            Printer().__message("Sensitive mode was enable, this file may contain encoded sensitive information, please do not share it with anyone", COLORS.YELLOW)
+        Logger().show_sensitive_data = mode
+        if mode == Logger().SENSITIVE_LEVELS.SHOW:
+            Logger().__message("Sensitive mode was disable, this file may contain sensitive information, please do not share it with anyone", COLORS.YELLOW)
+        elif mode == Logger().SENSITIVE_LEVELS.ENCODE:
+            Logger().__message("Sensitive mode was enable, this file may contain encoded sensitive information, please do not share it with anyone", COLORS.YELLOW)
         
     @staticmethod
     def add_sensitive(sensitive : Any):
-        Printer().sensitive_data.append(sensitive)
+        Logger().sensitive_data.append(sensitive)
         
     @staticmethod
     def config_argparse(parser : argparse.ArgumentParser):
@@ -205,7 +205,7 @@ class Printer:
         
     @staticmethod
     def parse_args(args : argparse.Namespace):
-        self = Printer()
+        self = Logger()
         if args.log_level:
             self.set_level(self.LEVELS.from_string(args.log_level))
         if args.log_target:
@@ -215,22 +215,22 @@ class Printer:
     
             
 def deep_debug(message : Any):
-    Printer.deep_debug(message, getCallerInfo())
+    Logger.deep_debug(message, getCallerInfo())
         
 def debug(message : Any):
-    Printer.debug(message, getCallerInfo())
+    Logger.debug(message, getCallerInfo())
 
 def info(message : Any):
-    Printer.info(message, getCallerInfo())
+    Logger.info(message, getCallerInfo())
     
 def warning(message : Any):
-    Printer.warning(message, getCallerInfo())
+    Logger.warning(message, getCallerInfo())
     
 def error(message : Any):
-    Printer.error(message, getCallerInfo())
+    Logger.error(message, getCallerInfo())
 
 def critical(message : Any):
-    Printer.critical(message, getCallerInfo())
+    Logger.critical(message, getCallerInfo())
     
 def message(message : Any, color : COLORS = COLORS.NONE):
     """
@@ -238,7 +238,7 @@ def message(message : Any, color : COLORS = COLORS.NONE):
     This method should be used before any other method\n
     It is used to pass information to the user about the global execution of the program
     """
-    Printer.message(message, color)
+    Logger.message(message, color)
     
     
 def deep_debug_func(chrono : bool = False):
@@ -258,7 +258,7 @@ def deep_debug_func(chrono : bool = False):
     [datetime] [   DEBUG   ] Function my_function returned "value1value2"
     ```
     
-    note: this decorator does nothing if the Printer level is not set to deep debug
+    note: this decorator does nothing if the Logger level is not set to deep debug
     """
     def pre_wrapper(func : Callable):
         def wrapper(*args, **kwargs):
@@ -292,7 +292,7 @@ def debug_func(chrono : bool = False):
     [datetime] [   DEBUG   ] Function my_function returned "value1value2"
     ```
     
-    note: this decorator does nothing if the Printer level is not set to debug or deep debug
+    note: this decorator does nothing if the Logger level is not set to debug or deep debug
     """
     def pre_wrapper(func : Callable):
         def wrapper(*args, **kwargs):
@@ -334,7 +334,7 @@ def chrono(func : Callable):
     return wrapper
 
 if __name__ == '__main__':
-    Printer.set_level(Printer.LEVELS.DEEP_DEBUG)
+    Logger.set_level(Logger.LEVELS.DEEP_DEBUG)
     deep_debug("Deep debug message")
     debug({"key": "value", "key2": "value2"})
     info("Info message")
@@ -343,7 +343,7 @@ if __name__ == '__main__':
     critical("Critical message")
     info("This is a multi-line message\n\tThis is the second line\n\t\tThis is the third line")
     
-    Printer.set_module("TestModule")
+    Logger.set_module("TestModule")
     
     critical("Critical message")
     info("This is a multi-line message\n\tThis is the second line\n\t\tThis is the third line")

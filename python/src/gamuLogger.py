@@ -1,4 +1,3 @@
-from enum import Enum
 from sys import stdout, stderr
 from datetime import datetime
 from typing import Any, Callable, List
@@ -16,18 +15,21 @@ class Logger:
         if cls.__instance is None:
             cls.__instance = super(Logger, cls).__new__(cls)
             cls.__instance.targets = [Target(print, "terminal")]
-            cls.__instance.show_sensitive_data = SENSITIVE_LEVELS.HIDE
-            cls.__instance.sensitive_data = [] # list of sensitive data that should not be printed
+            cls.__instance.sensitiveData = [] # list of sensitive data that should not be printed
             cls.__instance.moduleMap = {} # key : filename, value : module name
             
             #configuring default target
             Target.get("terminal")["level"] = LEVELS.INFO
+            Target.get("terminal")["sensitiveMode"] = SENSITIVE_LEVELS.HIDE
         return cls.__instance    
     
     def __print(self, level : LEVELS, message : str, filename : str):
         for target in self.targets:
+            self.__printInTarget(level, message, filename, target)
+            
+    def __printInTarget(self, level : LEVELS, message : str, filename : str, target : Target):
             if not target["level"] <= level:
-                continue
+                return
             result = ""
             if target.type == Target.Type.TERMINAL:
                 result += f"[{str(COLORS.BLUE)}{getTime()}{str(COLORS.RESET)}] [{level.color()}{level}{str(COLORS.RESET)}]"
@@ -47,7 +49,33 @@ class Logger:
                 message = str(message)
             
             result += " " + replaceNewLine(message, 33 + (15 if filename in self.moduleMap else 0))
+            result = self.__parseSensitive(result, target)
             target(result)
+            
+    def __printMessageInTarget(self, message : str, color : COLORS, target : Target):
+        message = self.__parseSensitive(message, target)
+        if target.type == Target.Type.TERMINAL:
+            target(f"{str(color)}{message}{str(COLORS.RESET)}")
+        else:
+            target(message)
+        
+    def __printMessage(self, message : str, color : COLORS):
+        for target in self.targets:
+            self.__printMessageInTarget(message, color, target)
+    
+    def __parseSensitive(self, message : str, target : Target) -> str:
+        match target["sensitiveMode"]:
+            case SENSITIVE_LEVELS.HIDE:
+                for sensitive in self.sensitiveData:
+                    message = message.replace(sensitive, "*" * len(sensitive)) 
+                return message          
+            case SENSITIVE_LEVELS.SHOW:
+                return message
+            
+            case SENSITIVE_LEVELS.ENCODE:
+                for sensitive in self.sensitiveData:
+                    # encode it in base64
+                    return message.replace(sensitive, sensitive.encode("utf-8").hex())
     
     @staticmethod
     def deepDebug(message : Any, filename = getCallerInfo()):
@@ -75,7 +103,7 @@ class Logger:
         
     @staticmethod
     def message(message : Any, color : COLORS = COLORS.NONE):
-        Logger().__print(LEVELS.INFO, f"{color}{message}{COLORS.RESET}")
+        Logger().__printMessage(message, color)
         
     @staticmethod
     def setLevel(targetName: str, level : LEVELS):
@@ -86,11 +114,24 @@ class Logger:
             raise ValueError("Target not found")
         
     @staticmethod
+    def setSensitiveMode(targetName: str, mode : SENSITIVE_LEVELS):
+        target = Target.get(targetName)
+        if target in Logger().targets:
+            target["sensitiveMode"] = mode
+        else:
+            raise ValueError("Target not found")
+        
+        if mode == SENSITIVE_LEVELS.SHOW:
+            Logger().__printMessageInTarget("Sensitive mode was disable, this file may contain sensitive information, please do not share it with anyone", COLORS.YELLOW, target)
+        elif mode == SENSITIVE_LEVELS.ENCODE:
+            Logger().__printMessageInTarget("Sensitive encoded mode was enable, this file may contain encoded sensitive information, please do not share it with anyone", COLORS.YELLOW, target)
+        
+    @staticmethod
     def setModule(name : str):
         Logger().moduleMap[getCallerInfo()] = name
         
     @staticmethod
-    def addTarget(targetFunc : Callable[[str], None] | str | Target, level : LEVELS = LEVELS.INFO):
+    def addTarget(targetFunc : Callable[[str], None] | str | Target, level : LEVELS = LEVELS.INFO, sensitiveMode : SENSITIVE_LEVELS = SENSITIVE_LEVELS.HIDE):
         target = None #type: Target
         if type(targetFunc) == str:
             target = Target.fromFile(targetFunc)
@@ -100,18 +141,11 @@ class Logger:
             target = Target(targetFunc)
         Logger().targets.append(target)
         Logger.setLevel(target.name, level)
-        
-    @staticmethod
-    def showSensitive(mode : SENSITIVE_LEVELS):
-        Logger().show_sensitive_data = mode
-        if mode == Logger().SENSITIVE_LEVELS.SHOW:
-            Logger().__message("Sensitive mode was disable, this file may contain sensitive information, please do not share it with anyone", COLORS.YELLOW)
-        elif mode == Logger().SENSITIVE_LEVELS.ENCODE:
-            Logger().__message("Sensitive mode was enable, this file may contain encoded sensitive information, please do not share it with anyone", COLORS.YELLOW)
-        
+        Logger.setSensitiveMode(target.name, sensitiveMode)
+
     @staticmethod
     def addSensitive(sensitive : Any):
-        Logger().sensitive_data.append(sensitive)
+        Logger().sensitiveData.append(sensitive)
         
     @staticmethod
     def configArgparse(parser : argparse.ArgumentParser):
@@ -124,11 +158,11 @@ class Logger:
     def parseArgs(args : argparse.Namespace):
         self = Logger()
         if args.log_level:
-            self.set_level(LEVELS.from_string(args.log_level))
+            self.setTevel(LEVELS.from_string(args.log_level))
         if args.log_target:
-            self.set_target(args.log_target)
+            self.setTarget(args.log_target)
         if args.log_sensitive:
-            self.show_sensitive(args.log_sensitive)
+            self.showSensitive(args.log_sensitive)
     
             
 def deepDebug(message : Any):
@@ -252,3 +286,17 @@ def chrono(func : Callable):
 
 # create the instance of the logger
 Logger()
+
+
+if __name__ == '__main__':
+    Logger.setSensitiveMode("terminal", SENSITIVE_LEVELS.HIDE)
+    Logger.addTarget("main.log", LEVELS.DEEP_DEBUG, SENSITIVE_LEVELS.SHOW)
+    Logger.setModule("main")
+    Logger.addSensitive("password")
+    
+    deepDebug("This is a deep debug message")
+    debug("This is a debug message")
+    info("hello, this is my password !")
+    warning("This is a warning")
+    error("this is an error")
+    critical("The process will now exit")

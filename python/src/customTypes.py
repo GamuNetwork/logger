@@ -22,9 +22,29 @@ class COLORS(Enum):
         return self.value
     
     def __add__(self, other):
+        """
+        Allow to concatenate a string with a color, example:
+        ```python
+        print(COLORS.RED + "This is red text" + COLORS.RESET)
+        ```
+        or using an f-string:
+        ```python
+        print(f"{COLORS.RED}This is red text{COLORS.RESET}")
+        ```
+        """
         return f"{self}{other}"
     
     def __radd__(self, other):
+        """
+        Allow to concatenate a string with a color, example:
+        ```python
+        print(COLORS.RED + "This is red text" + COLORS.RESET)
+        ```
+        or using an f-string:
+        ```python
+        print(f"{COLORS.RED}This is red text{COLORS.RESET}")
+        ```
+        """
         return f"{other}{self}"
     
     def __repr__(self):
@@ -32,73 +52,97 @@ class COLORS(Enum):
 
 
 class LEVELS(Enum):
-        DEEP_DEBUG = 0  # this level is used to print very detailed information, it may contain sensitive information
-        DEBUG = 1       # this level is used to print debug information, it may contain sensitive information
-        INFO = 2        # this level is used to print information about the normal execution of the program
-        WARNING = 3     # this level is used to print warnings about the execution of the program (non-blocking, but may lead to errors)
-        ERROR = 4       # this level is used to print errors that may lead to the termination of the program
-        CRITICAL = 5    # this level is used to print critical errors that lead to the termination of the program, typically used in largest except block
-        
-        
-        @staticmethod
-        def from_string(level):
-            match level.lower():
-                case 'debug':
-                    return LEVELS.DEBUG
-                case 'info':
-                    return LEVELS.INFO
-                case 'warning':
-                    return LEVELS.WARNING
-                case 'error':
-                    return LEVELS.ERROR
-                case 'critical':
-                    return LEVELS.CRITICAL
-                case _:
-                    return LEVELS.INFO
-
-        def __str__(self):
-            match self:
-                case LEVELS.DEEP_DEBUG:
-                    return '  DEBUG   '
-                case LEVELS.DEBUG:
-                    return '  DEBUG   '
-                case LEVELS.INFO:
-                    return '   INFO   '
-                case LEVELS.WARNING:
-                    return ' WARNING  '
-                case LEVELS.ERROR:
-                    return '  ERROR   '
-                case LEVELS.CRITICAL:
-                    return ' CRITICAL '
-        
-        def __int__(self):
-            return self.value
-
-        def __le__(self, other):
-            return self.value <= other.value
+    """
+    ## list of levels:
+    - DEEP_DEBUG:   this level is used to print very detailed information, it may contain sensitive information
+    - DEBUG:        this level is used to print debug information, it may contain sensitive information
+    - INFO:         this level is used to print information about the normal execution of the program
+    - WARNING:      this level is used to print warnings about the execution of the program (non-blocking, but may lead to errors)
+    - ERROR:        this level is used to print errors that may lead to the termination of the program
+    - CRITICAL:     this level is used to print critical errors that lead to the termination of the program, typically used in largest except block
+    """
     
-        def color(self) -> COLORS:
-            match self:
-                case LEVELS.DEEP_DEBUG:
-                    return COLORS.BLUE
-                case LEVELS.DEBUG:
-                    return COLORS.BLUE
-                case LEVELS.INFO:
-                    return COLORS.GREEN
-                case LEVELS.WARNING:
-                    return COLORS.YELLOW
-                case LEVELS.ERROR:
-                    return COLORS.RED
-                case LEVELS.CRITICAL:
-                    return COLORS.DARK_RED
-                case _:
-                    return COLORS.RESET
+    DEEP_DEBUG = 0  # this level is used to print very detailed information, it may contain sensitive information
+    DEBUG = 1       # this level is used to print debug information, it may contain sensitive information
+    INFO = 2        # this level is used to print information about the normal execution of the program
+    WARNING = 3     # this level is used to print warnings about the execution of the program (non-blocking, but may lead to errors)
+    ERROR = 4       # this level is used to print errors that may lead to the termination of the program
+    CRITICAL = 5    # this level is used to print critical errors that lead to the termination of the program, typically used in largest except block
+    
+    
+    @staticmethod
+    def from_string(level : str) -> 'LEVELS':
+        match level.lower():
+            case 'debug':
+                return LEVELS.DEBUG
+            case 'info':
+                return LEVELS.INFO
+            case 'warning':
+                return LEVELS.WARNING
+            case 'error':
+                return LEVELS.ERROR
+            case 'critical':
+                return LEVELS.CRITICAL
+            case _:
+                return LEVELS.INFO
+
+    def __str__(self) -> str:
+        """
+        Return the string representation of the level, serialized to 10 characters (centered with spaces)
+        """
+        match self:
+            case LEVELS.DEEP_DEBUG:
+                return '  DEBUG   '
+            case LEVELS.DEBUG:
+                return '  DEBUG   '
+            case LEVELS.INFO:
+                return '   INFO   '
+            case LEVELS.WARNING:
+                return ' WARNING  '
+            case LEVELS.ERROR:
+                return '  ERROR   '
+            case LEVELS.CRITICAL:
+                return ' CRITICAL '
+    
+    def __int__(self):
+        return self.value
+
+    def __le__(self, other : 'LEVELS'):
+        return self.value <= other.value
+
+    def color(self) -> COLORS:
+        match self:
+            case LEVELS.DEEP_DEBUG:
+                return COLORS.BLUE
+            case LEVELS.DEBUG:
+                return COLORS.BLUE
+            case LEVELS.INFO:
+                return COLORS.GREEN
+            case LEVELS.WARNING:
+                return COLORS.YELLOW
+            case LEVELS.ERROR:
+                return COLORS.RED
+            case LEVELS.CRITICAL:
+                return COLORS.DARK_RED
     
     
 class SENSITIVE_LEVELS(Enum):
     HIDE = 0
     SHOW = 1
-    ENCODE = 2
+    
+    @staticmethod
+    def from_string(level : str) -> 'SENSITIVE_LEVELS':
+        match level.lower():
+            case 'hide':
+                return SENSITIVE_LEVELS.HIDE
+            case 'show':
+                return SENSITIVE_LEVELS.SHOW
+            case _:
+                return SENSITIVE_LEVELS.HIDE
+    
+    @staticmethod
+    def from_bool(value : bool) -> 'SENSITIVE_LEVELS':
+        return SENSITIVE_LEVELS.SHOW if value else SENSITIVE_LEVELS.HIDE
     
 
 class Target:
@@ -118,11 +162,11 @@ class Target:
     def __init__(self, target : Callable[[str], None], name : str = None):
         self.target = target
         self.name = name if name is not None else target.__name__
-        self.properties = {}
+        self.properties = {} #type: dict[str, any]
         self.type = Target.Type.TERMINAL if target == print else Target.Type.FILE
 
     @staticmethod
-    def fromFile(file : str):
+    def fromFile(file : str) -> 'Target':
         def writeToFile(string : str):
             with open(file, 'a') as f:
                 f.write(string + '\n')
@@ -133,22 +177,22 @@ class Target:
     def __call__(self, string : str):
         self.target(string)
         
-    def __str__(self):
+    def __str__(self) -> str:
         return self.name
     
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"Target({self.name})"
     
-    def __getitem__(self, key):
+    def __getitem__(self, key: str) -> any:
         return self.properties[key]
     
-    def __setitem__(self, key, value):
+    def __setitem__(self, key: str, value: any):
         self.properties[key] = value
         
-    def __delitem__(self, key):
+    def __delitem__(self, key: str):
         del self.properties[key]
         
-    def __contains__(self, key):
+    def __contains__(self, key: str) -> bool:
         return key in self.properties
     
     @staticmethod

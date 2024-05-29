@@ -1,8 +1,6 @@
 import os
 import inspect
 from datetime import datetime
-from typing import Callable
-from enum import Enum
 
 def getCallerInfo():
     """

@@ -128,7 +128,12 @@ class Logger:
         
     @staticmethod
     def setModule(name : str):
-        Logger().moduleMap[getCallerInfo()] = name
+        if name == "":
+            del Logger().moduleMap[getCallerInfo()]
+        elif len(name) > 10:
+            raise ValueError("Module name should be less than 10 characters")
+        else:
+            Logger().moduleMap[getCallerInfo()] = name
         
     @staticmethod
     def addTarget(targetFunc : Callable[[str], None] | str | Target, level : LEVELS = LEVELS.INFO, sensitiveMode : SENSITIVE_LEVELS = SENSITIVE_LEVELS.HIDE):

@@ -2,15 +2,15 @@
 
 The goal of this module is to provide a simple, easy to use but powerful logging module for both python and javascript.
 
-## Features
+## ✨ Features
 - Simple and easy to use (see examples below)
 - Supports multiple log levels (DEEP_DEBUG, DEBUG, INFO, WARNING, ERROR, CRITICAL)
-- Supports multiple log outputs (console, file, etc)
+- Supports multiple log outputs (console, file, etc) with separated level
 - Supports colors in console output
 - Contain project modules features based on the current file (see examples below)
 - Add decorators to log function calls (see examples below) (python only for now)
 
-## Installation
+## 🔨 Installation
 ### Python
 The python package is available in the assets of the latest release on [github](https://github.com/GamuNetwork/logger/releases/latest).
 You can manually download the package and install it with pip:
@@ -19,9 +19,9 @@ pip install path/to/gamu_logger-x.x.x-py3-none-any.whl
 ```
 Or you can install it directly from github:
 ```bash
-pip install https://github.com/GamuNetwork/logger/releases/download/1.1.4/gamu_logger-1.1.4-py3-none-any.whl
+pip install https://github.com/GamuNetwork/logger/releases/download/2.0.0/gamu_logger-2.0.0-py3-none-any.whl
 ```
-> note: replace `1.1.4` with the latest version number.
+> note: replace `2.0.0` with the latest version number.
 
 ### Javascript
 The javascript package is available in the package of our [github](https://github.com/GamuNetwork/logger/releases/latest) repository. To install it with npm, you will need to add a file named `.npmrc` at the root of your project with the following content:
@@ -36,7 +36,7 @@ Then you can install the package with npm:
 npm install @gamunetwork/logger
 ```
 
-## Examples
+## 💡 Examples
 ### Python
 ```python
 from gamuLogger import error, info, critical
@@ -144,5 +144,5 @@ This is a message
 ```
 > if written in a file, the color parameter will be ignored.
 
-## Issue
+## 🚨 Issue
 If you encounter any problem, please let us know by creating an issue here, on github !

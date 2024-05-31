@@ -129,7 +129,7 @@
                     <td>Log a message with the DEEP_DEBUG level</td>
                 </tr>
                 <tr>
-                    <td><code>debugd</code></td>
+                    <td><code>debug</code></td>
                     <td>- <code>message: string</code></td>
                     <td><code>void</code></td>
                     <td>Log a message with the DEBUG level</td>
@@ -432,27 +432,27 @@ Logger.setModule('my-module'); // set the module name for this file to 'my-modul
 
 ## Examples
 Here are some examples of how you can use the logger:
-```javascript
-import { Logger, LEVELS, SENSITIVE_LEVELS } from '@gamunetwork/logger';
+```js
+import { Logger, LEVELS, SENSITIVE_LEVELS, info, warning, debug, error } from '@gamunetwork/logger';
 
-Logger.setLevel(LEVELS.INFO);
+Logger.setLevel("terminal", LEVELS.INFO);
+info("A more detailled log file is available at out.log");
 
-Logger.setSensitiveLevel(SENSITIVE_LEVELS.HIDE);
+Logger.addTarget("out.log", LEVELS.DEEP_DEBUG, SENSITIVE_LEVELS.SHOW);
 
-
-Logger.info('This is an info message');
-Logger.warning('This is a warning message');
-Logger.debug('This is a debug message that will not be displayed');
-Logger.error('This is an error message');
+info('This is an info message');
+warning('This is a warning message');
+debug('This is a debug message'); //this message will only be displayed in the log file, not in the console
+error('This is an error message');
 ```
 
-```javascript
+```js
 import { Logger, LEVELS, SENSITIVE_LEVELS, deepDebug, info, critical } from '@gamunetwork/logger';
 
 //import configuration from json
 import config from './config.json';
 
-Logger.setLevel(config.logLevel);
+Logger.setLevel("terminal", config.logLevel);
 
 //ask the user for 2 numbers
 const number1 = prompt('Enter the first number:');

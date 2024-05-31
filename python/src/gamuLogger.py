@@ -149,8 +149,8 @@ class Logger:
         Logger.setSensitiveMode(target.name, sensitiveMode)
 
     @staticmethod
-    def addSensitive(sensitive : Any):
-        Logger().sensitiveData.append(sensitive)
+    def addSensitiveData(data : Any):
+        Logger().sensitiveData.append(data)
         
     @staticmethod
     def configArgparse(parser : argparse.ArgumentParser):

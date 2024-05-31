@@ -144,5 +144,7 @@ This is a message
 ```
 > if written in a file, the color parameter will be ignored.
 
+A more detailed documentation is available in [python](python) and [javascript](javascript) subdirectories.
+
 ## 🚨 Issue
 If you encounter any problem, please let us know by creating an issue here, on github !

@@ -75,6 +75,10 @@
                 <td>Log a message with the CRITICAL level, should be used to tell the reason of a crash (aka. the message from the highest level of the stack trace)</td>
             </tr>
             <tr>
+                <td><code>message</code></td>
+                <td>- <code>message: string</code><br />- <code>color: COLORS</code></td>
+                <td><code>void</code></td>
+                <td>Display a message with a specific color</td>
             </tr>
         </tbody>
     </table>
@@ -157,6 +161,12 @@
                     <td>- <code>message: string</code></td>
                     <td><code>void</code></td>
                     <td>Log a message with the CRITICAL level</td>
+                </tr>
+                <tr>
+                    <td><code>message</code></td>
+                    <td>- <code>message: string</code><br />- <code>color: COLORS</code></td>
+                    <td><code>void</code></td>
+                    <td>Display a message with a specific color</td>
                 </tr>
             </tbody>
         </table>

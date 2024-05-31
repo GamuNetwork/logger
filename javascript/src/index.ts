@@ -190,6 +190,10 @@ function critical(message : string){
     Logger.critical(message, GetCallerInfo());
 }
 
+function message(message : string, color = COLORS.NONE){
+    Logger.message(message, color);
+}
+
 
 export {
     Logger,
@@ -202,5 +206,6 @@ export {
     info,
     warning,
     error,
-    critical
+    critical,
+    message
 }

@@ -75,6 +75,12 @@ pip install https://github.com/GamuNetwork/logger/releases/download/2.0.0/gamu_l
                 <td>Log a message with the CRITICAL level, should be used to tell the reason of a crash (aka. the message from the highest level of the stack trace)</td>
             </tr>
             <tr>
+                <td><code>message</code></td>
+                <td>- <code>message: Any</code><br />- <code>color: COLORS</code></td>
+                <td><code>None</code></td>
+                <td>Display a message with a specific color</td>
+            </tr>
+            <tr>
             </tr>
         </tbody>
     </table>

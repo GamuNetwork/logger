@@ -1,6 +1,4 @@
-import * as fs from 'fs';
-
-import { replaceNewLine, getTime, centerString, GetCallerInfo } from './utils.js';
+import { replaceNewLine, getTime, centerString, GetCallerFileName } from './utils.js';
 import { COLORS, LEVELS, SENSITIVE_LEVELS, Target, TargetType } from './customTypes.js';
 
 
@@ -70,7 +68,7 @@ class Logger{
         if(moduleName.length > 10){
             throw new Error("Module name '" + moduleName + "' is too long");
         }
-        Logger._instance._module_map[GetCallerInfo()] = moduleName;
+        Logger._instance._module_map[GetCallerFileName()] = moduleName;
     }
 
 // ------------------- INTERNAL METHODS --------------------
@@ -140,54 +138,54 @@ class Logger{
         }
     }
 
-    static deepDebug(message : string, filename = GetCallerInfo()){
+    static deepDebug(message : string, filename = GetCallerFileName()){
         Logger.log(LEVELS.DEEP_DEBUG, message, filename);
     }
 
-    static debug(message : string, filename = GetCallerInfo()){
+    static debug(message : string, filename = GetCallerFileName()){
         Logger.log(LEVELS.DEBUG, message, filename);
     }
     
-    static info(message : string, filename = GetCallerInfo()){
+    static info(message : string, filename = GetCallerFileName()){
         Logger.log(LEVELS.INFO, message, filename);
     }
 
-    static warning(message : string, filename = GetCallerInfo()){
+    static warning(message : string, filename = GetCallerFileName()){
         Logger.log(LEVELS.WARNING, message, filename);
     }
 
-    static error(message : string, filename = GetCallerInfo()){
+    static error(message : string, filename = GetCallerFileName()){
         Logger.log(LEVELS.ERROR, message, filename);
     }
 
-    static critical(message : string, filename = GetCallerInfo()){
+    static critical(message : string, filename = GetCallerFileName()){
         Logger.log(LEVELS.CRITICAL, message, filename);
     }
 }
 
 
 function deepDebug(message: string){
-    Logger.deepDebug(message, GetCallerInfo());
+    Logger.deepDebug(message, GetCallerFileName());
 }
 
 function debug(message : string){
-    Logger.debug(message, GetCallerInfo());
+    Logger.debug(message, GetCallerFileName());
 }
 
 function info(message : string){
-    Logger.info(message, GetCallerInfo());
+    Logger.info(message, GetCallerFileName());
 }
 
 function warning(message : string){
-    Logger.warning(message, GetCallerInfo());
+    Logger.warning(message, GetCallerFileName());
 }
 
 function error(message : string){
-    Logger.error(message, GetCallerInfo());
+    Logger.error(message, GetCallerFileName());
 }
 
 function critical(message : string){
-    Logger.critical(message, GetCallerInfo());
+    Logger.critical(message, GetCallerFileName());
 }
 
 function message(message : string, color = COLORS.NONE){

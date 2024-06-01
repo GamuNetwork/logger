@@ -72,11 +72,6 @@ class Logger:
             case SENSITIVE_LEVELS.SHOW:
                 return message
             
-            case SENSITIVE_LEVELS.ENCODE:
-                for sensitive in self.sensitiveData:
-                    # encode it in base64
-                    return message.replace(sensitive, sensitive.encode("utf-8").hex())
-    
     @staticmethod
     def deepDebug(message : Any, filename = getCallerInfo()):
         Logger().__print(LEVELS.DEEP_DEBUG, message, filename)
@@ -123,8 +118,6 @@ class Logger:
         
         if mode == SENSITIVE_LEVELS.SHOW:
             Logger().__printMessageInTarget("Sensitive mode was disable, this file may contain sensitive information, please do not share it with anyone", COLORS.YELLOW, target)
-        elif mode == SENSITIVE_LEVELS.ENCODE:
-            Logger().__printMessageInTarget("Sensitive encoded mode was enable, this file may contain encoded sensitive information, please do not share it with anyone", COLORS.YELLOW, target)
         
     @staticmethod
     def setModule(name : str):
@@ -292,12 +285,11 @@ def chrono(func : Callable):
 # create the instance of the logger
 Logger()
 
-
 if __name__ == '__main__':
     Logger.setSensitiveMode("terminal", SENSITIVE_LEVELS.HIDE)
     Logger.addTarget("main.log", LEVELS.DEEP_DEBUG, SENSITIVE_LEVELS.SHOW)
-    Logger.setModule("main")
-    Logger.addSensitive("password")
+    # Logger.setModule("main")
+    Logger.addSensitiveData("password")
     
     deepDebug("This is a deep debug message")
     debug("This is a debug message")

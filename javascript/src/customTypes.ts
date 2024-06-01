@@ -1,6 +1,6 @@
 import * as fs from 'fs';
 
-export enum COLORS{
+export const enum COLORS{
     RED = "\x1b[91m",
     DARK_RED = "\x1b[91m\x1b[1m",
     GREEN = "\x1b[92m",
@@ -11,7 +11,7 @@ export enum COLORS{
 }
 
 export namespace LEVELS{
-    export enum LEVELS {
+    export const enum LEVELS {
         DEEP_DEBUG = 0,
         DEBUG = 1,
         INFO = 2,
@@ -21,12 +21,12 @@ export namespace LEVELS{
     }
 
     //expose the content of the enum for easy access (LEVELS.DEBUG instead of LEVELS.LEVELS.DEBUG)
-    export let DEEP_DEBUG = LEVELS.DEEP_DEBUG;
-    export let DEBUG = LEVELS.DEBUG;
-    export let INFO = LEVELS.INFO;
-    export let WARNING = LEVELS.WARNING;
-    export let ERROR = LEVELS.ERROR;
-    export let CRITICAL = LEVELS.CRITICAL;
+    export const DEEP_DEBUG = LEVELS.DEEP_DEBUG;
+    export const DEBUG = LEVELS.DEBUG;
+    export const INFO = LEVELS.INFO;
+    export const WARNING = LEVELS.WARNING;
+    export const ERROR = LEVELS.ERROR;
+    export const CRITICAL = LEVELS.CRITICAL;
 
     export function name(level : LEVELS){
         switch(level){
@@ -81,19 +81,19 @@ export namespace LEVELS{
     }
 }
 
-export enum SENSITIVE_LEVELS{
+export const enum SENSITIVE_LEVELS{
     HIDE,
     SHOW
 }
 
-export enum TargetType{
+export const enum TargetType{
     FILE,
     TERMINAL
 }
 
 export class Target{
     private static instances : Record<string, Target> = {};
-    private _target : Function = (x : string) => {};
+    private _target : Function = (_ : string) => {};
     private _name : string = "";
     private _properties : Record<string, any> = {};
     private _type : TargetType = TargetType.FILE;
@@ -109,7 +109,7 @@ export class Target{
 
         this._target = targetFunc;
         this._name = name;
-        if(targetFunc === console.log){
+        if(targetFunc === console.log || targetFunc === console.error){
             this._type = TargetType.TERMINAL;
         }
         else{

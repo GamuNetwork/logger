@@ -12,9 +12,9 @@ export function centerString(str: string, length : number) {
     return str.padStart((length-str.length)/2 + str.length).padEnd(length);
 }
 
-export function GetCallerInfo(){
+export function GetCallerFileName() : string {
     let oldPrepareStackTrace = Error.prepareStackTrace;
-    Error.prepareStackTrace = function (err : any, stack : any) { return stack; }
+    Error.prepareStackTrace = function (_ : any, stack : any) { return stack; }
     let stack = new Error().stack;
     Error.prepareStackTrace = oldPrepareStackTrace;
     // @ts-ignore

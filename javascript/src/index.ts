@@ -1,5 +1,5 @@
 import { replaceNewLine, getTime, centerString, GetCallerFileName } from './utils.js';
-import { COLORS, LEVELS, SENSITIVE_LEVELS, Target, TargetType } from './customTypes.js';
+import { COLORS, LEVELS, SENSITIVE_LEVELS, Target, TargetType, TerminalTargets } from './customTypes.js';
 
 
 
@@ -15,9 +15,6 @@ class Logger{
             return Logger._instance;
         }
         Logger._instance = this;
-
-        let defaultTarget = Logger.addTarget(console.log);
-        defaultTarget.name = "terminal";
 
         return this;
     }
@@ -38,7 +35,7 @@ class Logger{
         }
     }
 
-    static addTarget(targetSource : string|Function, level = LEVELS.INFO, sensitiveMode = SENSITIVE_LEVELS.HIDE){
+    static addTarget(targetSource : string|Function|TerminalTargets, level = LEVELS.INFO, sensitiveMode = SENSITIVE_LEVELS.HIDE){
         let target : Target;
         if(typeof targetSource === 'string'){
             if(Target.exist(targetSource)){
@@ -46,7 +43,7 @@ class Logger{
             }
             target = Target.fromFile(targetSource);
         }
-        else if(typeof targetSource === 'function'){
+        else if(typeof targetSource === 'function' || typeof targetSource === 'number'){
             target = new Target(targetSource);
         }
         else{
@@ -94,7 +91,7 @@ class Logger{
                         result += `[ ${centerString(moduleName, 10)} ] `;
                     }
                 }
-                result += message;
+                result += message + "\n";
                 target.call(result);
             }
         }
@@ -127,7 +124,8 @@ class Logger{
             result["targets"].push(target.repr());
         }
         result["SensitiveDatas"] = Logger._instance._sensitive_data;
-        return JSON.stringify(result, null, 4);
+        result["moduleMap"] = Logger._instance._module_map;
+        return result;
     }
 
 // ------------------- LOGGING METHODS ---------------------
@@ -192,6 +190,7 @@ function message(message : string, color = COLORS.NONE){
     Logger.message(message, color);
 }
 
+Logger.addTarget(TerminalTargets.STDOUT);
 
 export {
     Logger,

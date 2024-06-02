@@ -5,7 +5,9 @@ export function replaceNewLine(str : string, indent = 33){
 }
 
 export function getTime(){ //format : "%Y-%m-%d %H:%M:%S"
-    return new Date().toISOString().replace(/T/, ' ').replace(/\..+/, '');
+    // return new Date().toISOString().replace(/T/, ' ').replace(/\..+/, '');
+    //same, but using timezones of the system
+    return new Date().toLocaleString().replace(/\//, '-');
 }
 
 export function centerString(str: string, length : number) {

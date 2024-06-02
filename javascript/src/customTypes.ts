@@ -1,6 +1,6 @@
 import * as fs from 'fs';
 
-export const enum COLORS{
+export enum COLORS{
     RED = "\x1b[91m",
     DARK_RED = "\x1b[91m\x1b[1m",
     GREEN = "\x1b[92m",
@@ -11,7 +11,7 @@ export const enum COLORS{
 }
 
 export namespace LEVELS{
-    export const enum LEVELS {
+    export enum LEVELS {
         DEEP_DEBUG = 0,
         DEBUG = 1,
         INFO = 2,
@@ -81,14 +81,19 @@ export namespace LEVELS{
     }
 }
 
-export const enum SENSITIVE_LEVELS{
-    HIDE,
+export enum SENSITIVE_LEVELS{
+    HIDE = 10,
     SHOW
 }
 
-export const enum TargetType{
-    FILE,
+export enum TargetType{
+    FILE = 20,
     TERMINAL
+}
+
+export enum TerminalTargets{
+    STDOUT = 30,
+    STDERR
 }
 
 export class Target{
@@ -99,23 +104,39 @@ export class Target{
     private _type : TargetType = TargetType.FILE;
 
 
-    constructor(targetFunc: Function, name: string|null = null){
-        if(name == null){
-            name = targetFunc.name;
+    constructor(targetFunc: Function | TerminalTargets, name: string|null = null){
+
+        if(typeof targetFunc == 'number'){
+            switch(targetFunc){
+                case TerminalTargets.STDOUT:
+                    targetFunc = process.stdout.write.bind(process.stdout);
+                    break;
+                case TerminalTargets.STDERR:
+                    targetFunc = process.stderr.write.bind(process.stderr);
+                    break;
+                default:
+                    throw new Error("Invalid target");
+            }
+            if(name == null){
+                name = "terminal";
+            }
+
+            this._type = TargetType.TERMINAL;
+
         }
-        if(Target.instances[name]){
-            return Target.instances[name];
+        else{
+            if(name == null){
+                name = targetFunc.name;
+            }
+
+            this._type = TargetType.FILE;
         }
 
         this._target = targetFunc;
         this._name = name;
-        if(targetFunc === console.log || targetFunc === console.error){
-            this._type = TargetType.TERMINAL;
+        if(Target.instances[name]){
+            return Target.instances[name];
         }
-        else{
-            this._type = TargetType.FILE;
-        }
-
         Target.instances[name] = this;
     }
 

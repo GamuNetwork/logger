@@ -3,7 +3,7 @@ from datetime import datetime
 from typing import Any, Callable, List
 import argparse
 from utils import getCallerInfo, getTime, replaceNewLine, centerString
-from customTypes import COLORS, LEVELS, SENSITIVE_LEVELS, Target
+from customTypes import COLORS, LEVELS, SENSITIVE_LEVELS, Target, TerminalTarget
 from json import dumps
 
 
@@ -14,7 +14,7 @@ class Logger:
     def __new__(cls):
         if cls.__instance is None:
             cls.__instance = super(Logger, cls).__new__(cls)
-            cls.__instance.targets = [Target(print, "terminal")]
+            cls.__instance.targets = [Target(TerminalTarget.STDOUT, "terminal")]
             cls.__instance.sensitiveData = [] # list of sensitive data that should not be printed
             cls.__instance.moduleMap = {} # key : filename, value : module name
             
@@ -50,7 +50,7 @@ class Logger:
             
             result += " " + replaceNewLine(message, 33 + (15 if filename in self.moduleMap else 0))
             result = self.__parseSensitive(result, target)
-            target(result)
+            target(result+"\n")
             
     def __printMessageInTarget(self, message : str, color : COLORS, target : Target):
         message = self.__parseSensitive(message, target)

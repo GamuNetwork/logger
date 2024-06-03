@@ -1,5 +1,6 @@
 from enum import Enum
 from typing import Callable
+import sys
 
 class COLORS(Enum):
     """
@@ -127,8 +128,8 @@ class LEVELS(Enum):
     
     
 class SENSITIVE_LEVELS(Enum):
-    HIDE = 0
-    SHOW = 1
+    HIDE = 10
+    SHOW = 11
     
     @staticmethod
     def from_string(level : str) -> 'SENSITIVE_LEVELS':
@@ -144,32 +145,46 @@ class SENSITIVE_LEVELS(Enum):
     def from_bool(value : bool) -> 'SENSITIVE_LEVELS':
         return SENSITIVE_LEVELS.SHOW if value else SENSITIVE_LEVELS.HIDE
     
+class TerminalTarget(Enum):
+    STDOUT = 30
+    STDERR = 31
 
 class Target:
     __instances = {}
     
     class Type(Enum):
-        FILE = 0
-        TERMINAL = 1
+        FILE = 20
+        TERMINAL = 21
     
-    def __new__(cls, target : Callable[[str], None], name : str = None):
+    def __new__(cls, target : Callable[[str], None] | TerminalTarget, name : str = None):
         if target in cls.__instances:
             return cls.__instances[target]
         instance = super().__new__(cls)
         cls.__instances[target] = instance
         return instance
     
-    def __init__(self, target : Callable[[str], None], name : str = None):
+    def __init__(self, target : Callable[[str], None] | TerminalTarget, name : str = None):
+        
+        if isinstance(target, Target.TerminalTarget):
+            match target:
+                case Target.TerminalTarget.STDOUT:
+                    target = sys.stdout.write
+                case Target.TerminalTarget.STDERR:
+                    target = sys.stderr.write
+            self.type = Target.Type.TERMINAL
+            self.name = "terminal"
+        else:
+            self.type = Target.Type.FILE
+            self.name = name if name is not None else target.__name__
+
         self.target = target
-        self.name = name if name is not None else target.__name__
         self.properties = {} #type: dict[str, any]
-        self.type = Target.Type.TERMINAL if target == print else Target.Type.FILE
 
     @staticmethod
     def fromFile(file : str) -> 'Target':
         def writeToFile(string : str):
             with open(file, 'a') as f:
-                f.write(string + '\n')
+                f.write(string)
         with open(file, 'w') as f: # clear the file
             f.write('')
         return Target(writeToFile, file)

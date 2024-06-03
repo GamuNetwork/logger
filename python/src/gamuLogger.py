@@ -9,7 +9,7 @@ from json import dumps
 
 class Logger:
 
-    __instance = None
+    __instance = None # type: Logger
     
     def __new__(cls):
         if cls.__instance is None:
@@ -32,7 +32,7 @@ class Logger:
                 return
             result = ""
             if target.type == Target.Type.TERMINAL:
-                result += f"[{str(COLORS.BLUE)}{getTime()}{str(COLORS.RESET)}] [{level.color()}{level}{str(COLORS.RESET)}]"
+                result += f"[{COLORS.BLUE}{getTime()}{COLORS.RESET}] [{level.color()}{level}{COLORS.RESET}]"
             else:
                 # if the target is a file, we don't need to color the output
                 result += f"[{getTime()}] [{level}]"
@@ -55,7 +55,7 @@ class Logger:
     def __printMessageInTarget(self, message : str, color : COLORS, target : Target):
         message = self.__parseSensitive(message, target)
         if target.type == Target.Type.TERMINAL:
-            target(f"{str(color)}{message}{str(COLORS.RESET)}")
+            target(f"{color}{message}{COLORS.RESET}")
         else:
             target(message)
         

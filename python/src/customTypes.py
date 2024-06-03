@@ -165,11 +165,11 @@ class Target:
     
     def __init__(self, target : Callable[[str], None] | TerminalTarget, name : str = None):
         
-        if isinstance(target, Target.TerminalTarget):
+        if isinstance(target, TerminalTarget):
             match target:
-                case Target.TerminalTarget.STDOUT:
+                case TerminalTarget.STDOUT:
                     target = sys.stdout.write
-                case Target.TerminalTarget.STDERR:
+                case TerminalTarget.STDERR:
                     target = sys.stderr.write
             self.type = Target.Type.TERMINAL
             self.name = "terminal"

@@ -126,7 +126,6 @@ class LEVELS(Enum):
             case LEVELS.CRITICAL:
                 return COLORS.DARK_RED
     
-    
 class SENSITIVE_LEVELS(Enum):
     HIDE = 10
     SHOW = 11
@@ -145,31 +144,55 @@ class SENSITIVE_LEVELS(Enum):
     def from_bool(value : bool) -> 'SENSITIVE_LEVELS':
         return SENSITIVE_LEVELS.SHOW if value else SENSITIVE_LEVELS.HIDE
     
-class TerminalTarget(Enum):
+class TERMINAL_TARGETS(Enum):
     STDOUT = 30
     STDERR = 31
+    
+    def __str__(self) -> str:
+        match self:
+            case TERMINAL_TARGETS.STDOUT:
+                return 'stdout'
+            case TERMINAL_TARGETS.STDERR:
+                return 'stderr'
 
 class Target:
-    __instances = {}
+    __instances = {} #type: dict[str, Target]
     
     class Type(Enum):
         FILE = 20
         TERMINAL = 21
+        
+        def __str__(self) -> str:
+            match self:
+                case Target.Type.FILE:
+                    return 'file'
+                case Target.Type.TERMINAL:
+                    return 'terminal'
     
-    def __new__(cls, target : Callable[[str], None] | TerminalTarget, name : str = None):
+    def __new__(cls, target : Callable[[str], None] | TERMINAL_TARGETS, name : str = None):
+        if name is None:
+            if isinstance(target, TERMINAL_TARGETS):
+                name = str(target)
+            elif hasattr(target, '__name__'):
+                name = target.__name__
+            else:
+                raise ValueError("The target must be a function or a TERMINAL_TARGETS; use Target.fromFile(file) to create a file target")
         if target in cls.__instances:
-            return cls.__instances[target]
+            return cls.__instances[name]
         instance = super().__new__(cls)
-        cls.__instances[target] = instance
+        cls.__instances[name] = instance
         return instance
     
-    def __init__(self, target : Callable[[str], None] | TerminalTarget, name : str = None):
+    def __init__(self, target : Callable[[str], None] | TERMINAL_TARGETS, name : str = None):
         
-        if isinstance(target, TerminalTarget):
+        if isinstance(target, str):
+            raise ValueError("The target must be a function or a TERMINAL_TARGETS; use Target.fromFile(file) to create a file target")
+        
+        if isinstance(target, TERMINAL_TARGETS):
             match target:
-                case TerminalTarget.STDOUT:
+                case TERMINAL_TARGETS.STDOUT:
                     target = sys.stdout.write
-                case TerminalTarget.STDERR:
+                case TERMINAL_TARGETS.STDERR:
                     target = sys.stderr.write
             self.type = Target.Type.TERMINAL
             self.name = "terminal"
@@ -211,12 +234,18 @@ class Target:
         return key in self.properties
     
     @staticmethod
-    def get(name : str) -> 'Target':
-        for target in Target.__instances.values():
-            if target.name == name:
-                return target
-        return None
+    def get(name : str | TERMINAL_TARGETS) -> 'Target':
+        name = str(name)
+        if Target.exist(name):
+            return Target.__instances[name]
+        else:
+            raise ValueError(f"Target {name} does not exist")
     
     @staticmethod
-    def exist(name : str) -> bool:
-        return Target.get(name) is not None
+    def exist(name : str | TERMINAL_TARGETS) -> bool:
+        name = str(name)
+        return name in Target.__instances.keys()
+    
+    @staticmethod
+    def list() -> list['Target']:
+        return list(Target.__instances.keys())

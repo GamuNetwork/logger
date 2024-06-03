@@ -1,5 +1,5 @@
 import { replaceNewLine, getTime, centerString, GetCallerFileName } from './utils.js';
-import { COLORS, LEVELS, SENSITIVE_LEVELS, Target, TargetType, TerminalTargets } from './customTypes.js';
+import { COLORS, LEVELS, SENSITIVE_LEVELS, Target, TargetType, TERMINAL_TARGETS } from './customTypes.js';
 
 
 
@@ -35,7 +35,7 @@ class Logger{
         }
     }
 
-    static addTarget(targetSource : string|Function|TerminalTargets, level = LEVELS.INFO, sensitiveMode = SENSITIVE_LEVELS.HIDE){
+    static addTarget(targetSource : string|Function|TERMINAL_TARGETS, level = LEVELS.INFO, sensitiveMode = SENSITIVE_LEVELS.HIDE){
         let target : Target;
         if(typeof targetSource === 'string'){
             if(Target.exist(targetSource)){
@@ -190,7 +190,7 @@ function message(message : string, color = COLORS.NONE){
     Logger.message(message, color);
 }
 
-Logger.addTarget(TerminalTargets.STDOUT);
+Logger.addTarget(TERMINAL_TARGETS.STDOUT);
 
 export {
     Logger,

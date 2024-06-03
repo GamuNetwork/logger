@@ -91,7 +91,7 @@ export enum TargetType{
     TERMINAL
 }
 
-export enum TerminalTargets{
+export enum TERMINAL_TARGETS{
     STDOUT = 30,
     STDERR
 }
@@ -104,14 +104,14 @@ export class Target{
     private _type : TargetType = TargetType.FILE;
 
 
-    constructor(targetFunc: Function | TerminalTargets, name: string|null = null){
+    constructor(targetFunc: Function | TERMINAL_TARGETS, name: string|null = null){
 
         if(typeof targetFunc == 'number'){
             switch(targetFunc){
-                case TerminalTargets.STDOUT:
+                case TERMINAL_TARGETS.STDOUT:
                     targetFunc = process.stdout.write.bind(process.stdout);
                     break;
-                case TerminalTargets.STDERR:
+                case TERMINAL_TARGETS.STDERR:
                     targetFunc = process.stderr.write.bind(process.stderr);
                     break;
                 default:

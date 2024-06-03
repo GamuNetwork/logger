@@ -1,4 +1,4 @@
-import { Target, TargetType, TerminalTargets } from '#dist/customTypes.js';
+import { Target, TargetType, TERMINAL_TARGETS } from '#dist/customTypes.js';
 import tmp from 'tmp';
 import fs from 'fs';
 
@@ -40,7 +40,7 @@ describe('testing Target.fromFile', () => {
 });
 
 describe('testing Target.constructor with stderr', () => {
-    let target = new Target(TerminalTargets.STDERR, 'stderr');
+    let target = new Target(TERMINAL_TARGETS.STDERR, 'stderr');
     it('target should be defined', () => {
         expect(target).toBeDefined();
     });

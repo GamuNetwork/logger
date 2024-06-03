@@ -3,7 +3,7 @@ from datetime import datetime
 from typing import Any, Callable, List
 import argparse
 from utils import getCallerInfo, getTime, replaceNewLine, centerString
-from customTypes import COLORS, LEVELS, SENSITIVE_LEVELS, Target, TerminalTarget
+from customTypes import COLORS, LEVELS, SENSITIVE_LEVELS, Target, TERMINAL_TARGETS
 from json import dumps
 
 
@@ -14,7 +14,7 @@ class Logger:
     def __new__(cls):
         if cls.__instance is None:
             cls.__instance = super(Logger, cls).__new__(cls)
-            cls.__instance.targets = [Target(TerminalTarget.STDOUT, "terminal")]
+            cls.__instance.targets = [Target(TERMINAL_TARGETS.STDOUT, "terminal")]
             cls.__instance.sensitiveData = [] # list of sensitive data that should not be printed
             cls.__instance.moduleMap = {} # key : filename, value : module name
             
@@ -129,7 +129,7 @@ class Logger:
             Logger().moduleMap[getCallerInfo()] = name
         
     @staticmethod
-    def addTarget(targetFunc : Callable[[str], None] | str | Target, level : LEVELS = LEVELS.INFO, sensitiveMode : SENSITIVE_LEVELS = SENSITIVE_LEVELS.HIDE):
+    def addTarget(targetFunc : Callable[[str], None] | str | Target | TERMINAL_TARGETS, level : LEVELS = LEVELS.INFO, sensitiveMode : SENSITIVE_LEVELS = SENSITIVE_LEVELS.HIDE):
         target = None #type: Target
         if type(targetFunc) == str:
             target = Target.fromFile(targetFunc)

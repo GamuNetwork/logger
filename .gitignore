@@ -1,3 +1,5 @@
 *.code-workspace
 *.log
 *.report.json
+.vscode
+*.save

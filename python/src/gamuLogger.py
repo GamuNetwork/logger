@@ -2,7 +2,7 @@ from sys import stdout, stderr
 from datetime import datetime
 from typing import Any, Callable, List
 import argparse
-from utils import getCallerInfo, getTime, replaceNewLine, centerString
+from utils import getCallerInfo, getTime, replaceNewLine, centerString, strictTypeCheck, CustomJSONEncoder
 from customTypes import COLORS, LEVELS, SENSITIVE_LEVELS, Target, TERMINAL_TARGETS
 from json import dumps
 
@@ -23,46 +23,50 @@ class Logger:
             Target.get("terminal")["sensitiveMode"] = SENSITIVE_LEVELS.HIDE
         return cls.__instance    
     
-    def __print(self, level : LEVELS, message : str, filename : str):
+    @strictTypeCheck
+    def __print(self, level : LEVELS, message : Any, filename : str):
         for target in self.targets:
             self.__printInTarget(level, message, filename, target)
-            
-    def __printInTarget(self, level : LEVELS, message : str, filename : str, target : Target):
-            if not target["level"] <= level:
-                return
-            result = ""
+        
+    @strictTypeCheck
+    def __printInTarget(self, level : LEVELS, message : Any, filename : str, target : Target):
+        if not target["level"] <= level:
+            return
+        result = ""
+        if target.type == Target.Type.TERMINAL:
+            result += f"[{COLORS.BLUE}{getTime()}{COLORS.RESET}] [{level.color()}{level}{COLORS.RESET}]"
+        else:
+            # if the target is a file, we don't need to color the output
+            result += f"[{getTime()}] [{level}]"
+        if filename in self.moduleMap:
             if target.type == Target.Type.TERMINAL:
-                result += f"[{COLORS.BLUE}{getTime()}{COLORS.RESET}] [{level.color()}{level}{COLORS.RESET}]"
+                result += f" [ {COLORS.BLUE}{centerString(self.moduleMap[filename], 10)}{COLORS.RESET} ]"
             else:
-                # if the target is a file, we don't need to color the output
-                result += f"[{getTime()}] [{level}]"
+                result += f" [ {centerString(self.moduleMap[filename], 10)} ]"
             
-            if filename in self.moduleMap:
-                if target.type == Target.Type.TERMINAL:
-                    result += f" [ {COLORS.BLUE}{centerString(self.moduleMap[filename], 10)}{COLORS.RESET} ]"
-                else:
-                    result += f" [ {centerString(self.moduleMap[filename], 10)} ]"
-                
-            if type(message) in [dict, list]:
-                message = dumps(message, indent=4)
-            elif type(message) not in [str, int, float]:
-                message = str(message)
+        if type(message) in [dict, list]:
+            message = dumps(message, indent=4, cls=CustomJSONEncoder)
+        elif type(message) not in [str, int, float]:
+            message = str(message)
+        
+        result += " " + replaceNewLine(message, 33 + (15 if filename in self.moduleMap else 0))
+        result = self.__parseSensitive(result, target)
+        target(result+"\n")
             
-            result += " " + replaceNewLine(message, 33 + (15 if filename in self.moduleMap else 0))
-            result = self.__parseSensitive(result, target)
-            target(result+"\n")
-            
+    @strictTypeCheck
     def __printMessageInTarget(self, message : str, color : COLORS, target : Target):
         message = self.__parseSensitive(message, target)
         if target.type == Target.Type.TERMINAL:
             target(f"{color}{message}{COLORS.RESET}")
         else:
-            target(message)
+            target(message+"\n")
         
+    @strictTypeCheck
     def __printMessage(self, message : str, color : COLORS):
         for target in self.targets:
             self.__printMessageInTarget(message, color, target)
     
+    @strictTypeCheck
     def __parseSensitive(self, message : str, target : Target) -> str:
         match target["sensitiveMode"]:
             case SENSITIVE_LEVELS.HIDE:
@@ -73,34 +77,42 @@ class Logger:
                 return message
             
     @staticmethod
+    @strictTypeCheck
     def deepDebug(message : Any, filename = getCallerInfo()):
         Logger().__print(LEVELS.DEEP_DEBUG, message, filename)
 
     @staticmethod
+    @strictTypeCheck
     def debug(message : Any, filename = getCallerInfo()):
         Logger().__print(LEVELS.DEBUG, message, filename)
     
     @staticmethod
+    @strictTypeCheck
     def info(message : Any, filename = getCallerInfo()):
         Logger().__print(LEVELS.INFO, message, getCallerInfo())
     
     @staticmethod
+    @strictTypeCheck
     def warning(message : Any, filename = getCallerInfo()):
         Logger().__print(LEVELS.WARNING, message, filename)
         
     @staticmethod
+    @strictTypeCheck
     def error(message : Any, filename = getCallerInfo()):
         Logger().__print(LEVELS.ERROR, message, filename)
         
     @staticmethod
+    @strictTypeCheck
     def critical(message : Any, filename = getCallerInfo()):
         Logger().__print(LEVELS.CRITICAL, message, filename)
         
     @staticmethod
+    @strictTypeCheck
     def message(message : Any, color : COLORS = COLORS.NONE):
         Logger().__printMessage(message, color)
         
     @staticmethod
+    @strictTypeCheck
     def setLevel(targetName: str, level : LEVELS):
         target = Target.get(targetName)
         if target in Logger().targets:
@@ -109,6 +121,7 @@ class Logger:
             raise ValueError("Target not found")
         
     @staticmethod
+    @strictTypeCheck
     def setSensitiveMode(targetName: str, mode : SENSITIVE_LEVELS):
         target = Target.get(targetName)
         if target in Logger().targets:
@@ -120,6 +133,7 @@ class Logger:
             Logger().__printMessageInTarget("Sensitive mode was disable, this file may contain sensitive information, please do not share it with anyone", COLORS.YELLOW, target)
         
     @staticmethod
+    @strictTypeCheck
     def setModule(name : str):
         if name == "":
             del Logger().moduleMap[getCallerInfo()]
@@ -129,7 +143,8 @@ class Logger:
             Logger().moduleMap[getCallerInfo()] = name
         
     @staticmethod
-    def addTarget(targetFunc : Callable[[str], None] | str | Target | TERMINAL_TARGETS, level : LEVELS = LEVELS.INFO, sensitiveMode : SENSITIVE_LEVELS = SENSITIVE_LEVELS.HIDE):
+    @strictTypeCheck
+    def addTarget(targetFunc : Callable[[str], None] | str | Target | TERMINAL_TARGETS, level : LEVELS = LEVELS.INFO, sensitiveMode : SENSITIVE_LEVELS = SENSITIVE_LEVELS.HIDE) -> str:
         target = None #type: Target
         if type(targetFunc) == str:
             target = Target.fromFile(targetFunc)
@@ -140,12 +155,15 @@ class Logger:
         Logger().targets.append(target)
         Logger.setLevel(target.name, level)
         Logger.setSensitiveMode(target.name, sensitiveMode)
-
+        return target.name
+    
     @staticmethod
+    @strictTypeCheck
     def addSensitiveData(data : Any):
         Logger().sensitiveData.append(data)
         
     @staticmethod
+    @strictTypeCheck
     def configArgparse(parser : argparse.ArgumentParser):
         log_group = parser.add_argument_group("Logging options")
         log_group.add_argument("--log-level", type=str, default="INFO", help="Set the logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)", choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"])
@@ -153,6 +171,7 @@ class Logger:
         log_group.add_argument("--log-sensitive", type=str, default="HIDE", help="Set the sensitive data display mode (HIDE, SHOW, ENCODE)", choices=["HIDE", "SHOW", "ENCODE"])
         
     @staticmethod
+    @strictTypeCheck
     def parseArgs(args : argparse.Namespace):
         self = Logger()
         if args.log_level:
@@ -161,26 +180,44 @@ class Logger:
             self.setTarget(args.log_target)
         if args.log_sensitive:
             self.showSensitive(args.log_sensitive)
-    
             
+    @staticmethod
+    @strictTypeCheck
+    def reset():
+        Target.clear()
+        Logger.__instance.targets = [Target(TERMINAL_TARGETS.STDOUT, "terminal")]
+        Logger.__instance.sensitiveData = []
+        Logger.__instance.moduleMap = {}
+        
+        #configuring default target
+        Target.get("terminal")["level"] = LEVELS.INFO
+        Target.get("terminal")["sensitiveMode"] = SENSITIVE_LEVELS.HIDE
+            
+@strictTypeCheck
 def deepDebug(message : Any):
     Logger.deepDebug(message, getCallerInfo())
         
+@strictTypeCheck
 def debug(message : Any):
     Logger.debug(message, getCallerInfo())
 
+@strictTypeCheck
 def info(message : Any):
     Logger.info(message, getCallerInfo())
-    
+
+@strictTypeCheck
 def warning(message : Any):
     Logger.warning(message, getCallerInfo())
     
+@strictTypeCheck
 def error(message : Any):
     Logger.error(message, getCallerInfo())
 
+@strictTypeCheck
 def critical(message : Any):
     Logger.critical(message, getCallerInfo())
     
+@strictTypeCheck
 def message(message : Any, color : COLORS = COLORS.NONE):
     """
     Print a message to the standard output, in yellow color\n
@@ -189,7 +226,7 @@ def message(message : Any, color : COLORS = COLORS.NONE):
     """
     Logger.message(message, color)
     
-    
+@strictTypeCheck
 def deepDebugFunc(chrono : bool = False):
     """
     Decorator to print deep debug messages before and after the function call
@@ -209,7 +246,9 @@ def deepDebugFunc(chrono : bool = False):
     
     note: this decorator does nothing if the Logger level is not set to deep debug
     """
+    @strictTypeCheck
     def pre_wrapper(func : Callable):
+        @strictTypeCheck
         def wrapper(*args, **kwargs):
             deepDebug(f"Calling {func.__name__} with\nargs: {args}\nkwargs: {kwargs}")
             if chrono:
@@ -224,6 +263,7 @@ def deepDebugFunc(chrono : bool = False):
         return wrapper
     return pre_wrapper
 
+@strictTypeCheck
 def debugFunc(chrono : bool = False):
     """
     Decorator to print deep debug messages before and after the function call
@@ -243,9 +283,11 @@ def debugFunc(chrono : bool = False):
     
     note: this decorator does nothing if the Logger level is not set to debug or deep debug
     """
+    @strictTypeCheck
     def pre_wrapper(func : Callable):
+        @strictTypeCheck
         def wrapper(*args, **kwargs):
-            debug(f"Calling {func.__name__} with\nargs: {args} and\nkwargs: {kwargs}")
+            debug(f"Calling {func.__name__} with\nargs: {args}\nkwargs: {kwargs}")
             if chrono:
                 start = datetime.now()
             result = func(*args, **kwargs)
@@ -258,6 +300,7 @@ def debugFunc(chrono : bool = False):
         return wrapper
     return pre_wrapper
 
+@strictTypeCheck
 def chrono(func : Callable):
     """
     Decorator to print the execution time of a function
@@ -274,6 +317,7 @@ def chrono(func : Callable):
     [datetime] [   DEBUG   ] Function my_function took 0.0001s to execute
     ```
     """
+    @strictTypeCheck
     def wrapper(*args, **kwargs):
         start = datetime.now()
         result = func(*args, **kwargs)
@@ -286,14 +330,21 @@ def chrono(func : Callable):
 Logger()
 
 if __name__ == '__main__':
-    Logger.setSensitiveMode("terminal", SENSITIVE_LEVELS.HIDE)
-    Logger.addTarget("main.log", LEVELS.DEEP_DEBUG, SENSITIVE_LEVELS.SHOW)
-    # Logger.setModule("main")
-    Logger.addSensitiveData("password")
+    from time import sleep
     
-    deepDebug("This is a deep debug message")
-    debug("This is a debug message")
-    info("hello, this is my password !")
-    warning("This is a warning")
-    error("this is an error")
-    critical("The process will now exit")
+    @chrono
+    def main():
+        Logger.setSensitiveMode("terminal", SENSITIVE_LEVELS.HIDE)
+        Logger.addTarget("main.log", LEVELS.DEEP_DEBUG, SENSITIVE_LEVELS.SHOW)
+        Logger.addSensitiveData("password")
+        
+        info(Target.get("terminal").type)
+        
+        deepDebug("This is a deep debug message")
+        debug("This is a debug message")
+        info("hello, this is my password !")
+        warning("This is a warning")
+        error("this is an error")
+        critical("The process will now exit")
+        
+    main()

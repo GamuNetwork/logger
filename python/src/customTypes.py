@@ -194,11 +194,11 @@ class Target:
                     target = sys.stdout.write
                 case TERMINAL_TARGETS.STDERR:
                     target = sys.stderr.write
-            self.type = Target.Type.TERMINAL
-            self.name = "terminal"
+            self.__type = Target.Type.TERMINAL
+            self.__name = "terminal"
         else:
-            self.type = Target.Type.FILE
-            self.name = name if name is not None else target.__name__
+            self.__type = Target.Type.FILE
+            self.__name = name if name is not None else target.__name__
 
         self.target = target
         self.properties = {} #type: dict[str, any]
@@ -216,10 +216,10 @@ class Target:
         self.target(string)
         
     def __str__(self) -> str:
-        return self.name
+        return self.__name
     
     def __repr__(self) -> str:
-        return f"Target({self.name})"
+        return f"Target({self.__name})"
     
     def __getitem__(self, key: str) -> any:
         return self.properties[key]
@@ -232,6 +232,18 @@ class Target:
         
     def __contains__(self, key: str) -> bool:
         return key in self.properties
+    
+    @property
+    def type(self) -> 'Target.Type':
+        return self.__type
+
+    @property
+    def name(self) -> str:
+        return self.__name
+    
+    @name.setter
+    def name(self, name : str):
+        self.__name = name
     
     @staticmethod
     def get(name : str | TERMINAL_TARGETS) -> 'Target':
@@ -249,3 +261,11 @@ class Target:
     @staticmethod
     def list() -> list['Target']:
         return list(Target.__instances.keys())
+    
+    @staticmethod
+    def clear():
+        Target.__instances = {}
+        
+    @staticmethod
+    def register(target : 'Target'):
+        Target.__instances[target.name] = target

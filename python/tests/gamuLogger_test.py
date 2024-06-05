@@ -6,9 +6,7 @@ import re
 import tempfile
 from time import sleep
 
-from gamuLogger import Logger, deepDebug, debug, info, warning, error, critical, message, deepDebugFunc, debugFunc, chrono, LEVELS, TERMINAL_TARGETS, SENSITIVE_LEVELS
-
-# from ..src.gamuLogger import Logger, deepDebug, debug, info, warning, error, critical, message, deepDebugFunc, debugFunc, chrono, LEVELS, TERMINAL_TARGETS
+from gamuLogger import Logger, deepDebug, debug, info, warning, error, critical, message, deepDebugFunc, debugFunc, chrono, LEVELS, TERMINAL_TARGETS, SENSITIVE_LEVELS #type: ignore
 
 class Test_Logger:
     def test_deepDebug(self, capsys):

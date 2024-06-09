@@ -130,9 +130,13 @@ class Test_Logger:
         
         test()
         captured = capsys.readouterr()
-        result = captured.out
+        result = captured.out #type: str
         print(result)
-        assert re.match(r"\[.*\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}.*\] \[.*  DEBUG   .*\] Calling test with\n                                 \| args: \(\)\n                                 \| kwargs: {}\n\[.*\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}.*\] \[.*  DEBUG   .*\] Function test took 0:00:00.\d{6} to execute and returned \"This is a deep debug function\"", result)
+        result = result.split("\n") #type: list[str]
+        assert re.match(r"\[.*\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}.*\] \[.*  DEBUG   .*\] Calling test with", result[0])
+        assert re.match(r"                                 \| args: \(\)", result[1])
+        assert re.match(r"                                 \| kwargs: {}", result[2])
+        assert re.match(r"\[.*\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}.*\] \[.*  DEBUG   .*\] Function test took 0:00:00.\d{6} to execute and returned \"This is a deep debug function\"", result[3])
         
     def test_debugFunc(self, capsys):
         Logger.reset()
@@ -144,9 +148,13 @@ class Test_Logger:
         
         test()
         captured = capsys.readouterr()
-        result = captured.out
+        result = captured.out #type: str
         print(result)
-        assert re.match(r'\[.*\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}.*\] \[.*  DEBUG   .*\] Calling test with\n                                 \| args: \(\)\n                                 \| kwargs: {}\n\[.*\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}.*\] \[.*  DEBUG   .*\] Function test returned "This is a debug function"', result)
+        result = result.split("\n") #type: list[str]
+        assert re.match(r"\[.*\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}.*\] \[.*  DEBUG   .*\] Calling test with", result[0])
+        assert re.match(r"                                 \| args: \(\)", result[1])
+        assert re.match(r"                                 \| kwargs: {}", result[2])
+        assert re.match(r"\[.*\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}.*\] \[.*  DEBUG   .*\] Function test returned \"This is a debug function\"", result[3])
         
     def test_setLevel(self, capsys):
         Logger.reset()
@@ -189,4 +197,36 @@ class Test_Logger:
         
         assert data in result
         
+    def test_fileTarget(self):
+        Logger.reset()
+        
+        with tempfile.TemporaryDirectory() as tmpdirname:
+            Logger.addTarget(tmpdirname + "/test.log")
+            
+            info("This is a message")
+            
+            with open(tmpdirname + "/test.log", "r") as file:
+                result = file.read()
+                
+                
+            print(result)
+            
+            assert re.match(r"\[\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\] \[   INFO   \] This is a message", result)
+            
+    def test_customFunctionAsTarget(self):
+        Logger.reset()
+        
+        out = []
+        def customFunction(message):
+            out.append(message)
+            
+        Logger.addTarget(customFunction)
+        
+        info("This is a message")
+        
+        result = out[0]
+        
+        print(result)
+        
+        assert re.match(r"\[\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\] \[   INFO   \] This is a message", result)
         

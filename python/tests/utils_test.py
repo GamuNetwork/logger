@@ -4,12 +4,12 @@ import sys
 import os
 import re
 
-FILENAME = os.path.basename(__file__)
+FILEPATH = os.path.abspath(__file__)
 
-from utils import getCallerInfo, getTime, replaceNewLine, centerString, strictTypeCheck #type: ignore
+from utils import getCallerInfo, getTime, replaceNewLine, centerString, strictTypeCheck, splitLongString #type: ignore
 
 def test_getCallerInfo():
-    assert getCallerInfo() == FILENAME
+    assert getCallerInfo() == FILEPATH
     
 def test_getTime():
     assert re.match(r"\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}", getTime())
@@ -65,3 +65,10 @@ def test_strictTypeCheck():
     
     with pytest.raises(TypeError):
         test3("1")
+
+def test_splitLongString():
+    assert splitLongString("Hello World", 5) == "Hello\nWorld"
+    assert splitLongString("Hello World", 6) == "Hello\nWorld"
+    pytest.raises(ValueError, splitLongString, "Hello World", 2)
+    pytest.raises(ValueError, splitLongString, "HelloWorld", 8)
+    assert splitLongString("Hello World", 11) == "Hello World"

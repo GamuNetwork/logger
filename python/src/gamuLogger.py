@@ -2,8 +2,8 @@ from sys import stdout, stderr
 from datetime import datetime
 from typing import Any, Callable, List
 import argparse
-from utils import getCallerInfo, getTime, replaceNewLine, centerString, strictTypeCheck, CustomJSONEncoder
-from customTypes import COLORS, LEVELS, SENSITIVE_LEVELS, Target, TERMINAL_TARGETS
+from utils import getCallerInfo, getTime, replaceNewLine, centerString, strictTypeCheck, CustomJSONEncoder, splitLongString
+from customTypes import COLORS, LEVELS, SENSITIVE_LEVELS, Target, TERMINAL_TARGETS, LoggerConfig
 from json import dumps
 
 
@@ -14,18 +14,20 @@ class Logger:
     def __new__(cls):
         if cls.__instance is None:
             cls.__instance = super(Logger, cls).__new__(cls)
-            cls.__instance.targets = [Target(TERMINAL_TARGETS.STDOUT, "terminal")]
-            cls.__instance.sensitiveData = [] # list of sensitive data that should not be printed
-            cls.__instance.moduleMap = {} # key : filename, value : module name
+            cls.__instance.config = LoggerConfig()
             
             #configuring default target
-            Target.get("terminal")["level"] = LEVELS.INFO
-            Target.get("terminal")["sensitiveMode"] = SENSITIVE_LEVELS.HIDE
+            if len(cls.__instance.config["targets"]) == 0:
+                cls.__instance.config["targets"] = [Target(TERMINAL_TARGETS.STDOUT, "terminal")]
+                Target.get("terminal")["level"] = LEVELS.INFO
+                Target.get("terminal")["sensitiveMode"] = SENSITIVE_LEVELS.HIDE
         return cls.__instance    
+    
+#---------------------------------------- Internal methods ----------------------------------------
     
     @strictTypeCheck
     def __print(self, level : LEVELS, message : Any, filename : str):
-        for target in self.targets:
+        for target in self.config['targets']:
             self.__printInTarget(level, message, filename, target)
         
     @strictTypeCheck
@@ -38,18 +40,21 @@ class Logger:
         else:
             # if the target is a file, we don't need to color the output
             result += f"[{getTime()}] [{level}]"
-        if filename in self.moduleMap:
-            if target.type == Target.Type.TERMINAL:
-                result += f" [ {COLORS.BLUE}{centerString(self.moduleMap[filename], 10)}{COLORS.RESET} ]"
-            else:
-                result += f" [ {centerString(self.moduleMap[filename], 10)} ]"
-            
-        if type(message) in [dict, list]:
-            message = dumps(message, indent=4, cls=CustomJSONEncoder)
-        elif type(message) not in [str, int, float]:
-            message = str(message)
         
-        result += " " + replaceNewLine(message, 33 + (15 if filename in self.moduleMap else 0))
+        if filename in self.config['moduleMap']:
+            if target.type == Target.Type.TERMINAL:
+                result += f" [ {COLORS.BLUE}{centerString(self.config['moduleMap'][filename], 10)}{COLORS.RESET} ]"
+            else:
+                result += f" [ {centerString(self.config['moduleMap'][filename], 10)} ]"
+            
+        if type(message) in [int, float, bool]:
+            message = str(message)
+        elif type(message) == str:
+            message = splitLongString(message, 100)
+        else:
+            message = dumps(message, indent=4, cls=CustomJSONEncoder)
+        
+        result += " " + replaceNewLine(message, 33 + (15 if filename in self.config['moduleMap'] else 0))
         result = self.__parseSensitive(result, target)
         target(result+"\n")
             
@@ -63,18 +68,20 @@ class Logger:
         
     @strictTypeCheck
     def __printMessage(self, message : str, color : COLORS):
-        for target in self.targets:
+        for target in self.config['targets']:
             self.__printMessageInTarget(message, color, target)
     
     @strictTypeCheck
     def __parseSensitive(self, message : str, target : Target) -> str:
         match target["sensitiveMode"]:
             case SENSITIVE_LEVELS.HIDE:
-                for sensitive in self.sensitiveData:
+                for sensitive in self.config['sensitiveDatas']:
                     message = message.replace(sensitive, "*" * len(sensitive)) 
                 return message          
             case SENSITIVE_LEVELS.SHOW:
                 return message
+            
+#---------------------------------------- Logging methods -----------------------------------------
             
     @staticmethod
     @strictTypeCheck
@@ -111,11 +118,13 @@ class Logger:
     def message(message : Any, color : COLORS = COLORS.NONE):
         Logger().__printMessage(message, color)
         
+#---------------------------------------- Configuration methods -----------------------------------
+        
     @staticmethod
     @strictTypeCheck
     def setLevel(targetName: str, level : LEVELS):
         target = Target.get(targetName)
-        if target in Logger().targets:
+        if target in Logger().config['targets']:
             target["level"] = level
         else:
             raise ValueError("Target not found")
@@ -124,7 +133,7 @@ class Logger:
     @strictTypeCheck
     def setSensitiveMode(targetName: str, mode : SENSITIVE_LEVELS):
         target = Target.get(targetName)
-        if target in Logger().targets:
+        if target in Logger().config['targets']:
             target["sensitiveMode"] = mode
         else:
             raise ValueError("Target not found")
@@ -136,11 +145,11 @@ class Logger:
     @strictTypeCheck
     def setModule(name : str):
         if name == "":
-            del Logger().moduleMap[getCallerInfo()]
+            del Logger().config['moduleMap'][getCallerInfo()]
         elif len(name) > 10:
             raise ValueError("Module name should be less than 10 characters")
         else:
-            Logger().moduleMap[getCallerInfo()] = name
+            Logger().config['moduleMap'][getCallerInfo()] = name
         
     @staticmethod
     @strictTypeCheck
@@ -152,7 +161,7 @@ class Logger:
             target = targetFunc
         else:
             target = Target(targetFunc)
-        Logger().targets.append(target)
+        Logger().config['targets'].append(target)
         Logger.setLevel(target.name, level)
         Logger.setSensitiveMode(target.name, sensitiveMode)
         return target.name
@@ -160,38 +169,34 @@ class Logger:
     @staticmethod
     @strictTypeCheck
     def addSensitiveData(data : Any):
-        Logger().sensitiveData.append(data)
+        Logger().config['sensitiveDatas'].append(data)
         
     @staticmethod
     @strictTypeCheck
-    def configArgparse(parser : argparse.ArgumentParser):
-        log_group = parser.add_argument_group("Logging options")
-        log_group.add_argument("--log-level", type=str, default="INFO", help="Set the logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)", choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"])
-        log_group.add_argument("--log-target", type=argparse.FileType('w'), default=stdout, help="Set the logging target (default: stdout)")
-        log_group.add_argument("--log-sensitive", type=str, default="HIDE", help="Set the sensitive data display mode (HIDE, SHOW, ENCODE)", choices=["HIDE", "SHOW", "ENCODE"])
+    def setConfigFile(configFile : str):
+        Logger().config = LoggerConfig.fromConfigFile(configFile)
         
-    @staticmethod
-    @strictTypeCheck
-    def parseArgs(args : argparse.Namespace):
-        self = Logger()
-        if args.log_level:
-            self.setTevel(LEVELS.from_string(args.log_level))
-        if args.log_target:
-            self.setTarget(args.log_target)
-        if args.log_sensitive:
-            self.showSensitive(args.log_sensitive)
-            
     @staticmethod
     @strictTypeCheck
     def reset():
         Target.clear()
-        Logger.__instance.targets = [Target(TERMINAL_TARGETS.STDOUT, "terminal")]
-        Logger.__instance.sensitiveData = []
-        Logger.__instance.moduleMap = {}
+        Logger().config.clear()
         
         #configuring default target
+        Logger.__instance.config["targets"] = [Target(TERMINAL_TARGETS.STDOUT, "terminal")]
         Target.get("terminal")["level"] = LEVELS.INFO
         Target.get("terminal")["sensitiveMode"] = SENSITIVE_LEVELS.HIDE
+        
+    @staticmethod
+    @strictTypeCheck
+    def configArgParse(parser : argparse.ArgumentParser):
+        return LoggerConfig.configArgParse(parser)
+    
+    @staticmethod
+    @strictTypeCheck
+    def parseArgs(args : argparse.Namespace) -> None:
+        Logger.__instance.config.parseArgs(args)
+        
             
 @strictTypeCheck
 def deepDebug(message : Any):
@@ -334,17 +339,24 @@ if __name__ == '__main__':
     
     @chrono
     def main():
-        Logger.setSensitiveMode("terminal", SENSITIVE_LEVELS.HIDE)
-        Logger.addTarget("main.log", LEVELS.DEEP_DEBUG, SENSITIVE_LEVELS.SHOW)
-        Logger.addSensitiveData("password")
+        # Logger.setSensitiveMode("terminal", SENSITIVE_LEVELS.HIDE)
+        # Logger.addTarget("main.log", LEVELS.DEEP_DEBUG, SENSITIVE_LEVELS.SHOW)
+        # Logger.addSensitiveData("password")
+        # Logger.setConfigFile("config.json")
         
-        info(Target.get("terminal").type)
+        parser = argparse.ArgumentParser(description='Python project build script')
+        Logger.configArgParse(parser)
+        args = parser.parse_args()
+        Logger.parseArgs(args)
         
-        deepDebug("This is a deep debug message")
+        info(Logger())
+        
+        info("This is a deep debug message very very long : lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec nec odio vitae")
         debug("This is a debug message")
         info("hello, this is my password !")
         warning("This is a warning")
         error("this is an error")
+        warning("password")
         critical("The process will now exit")
         
     main()

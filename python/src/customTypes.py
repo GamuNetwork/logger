@@ -1,6 +1,10 @@
 from enum import Enum
 from typing import Callable
 import sys
+import os
+import argparse
+from json import loads
+from xml.etree import ElementTree
 
 class COLORS(Enum):
     """
@@ -74,6 +78,8 @@ class LEVELS(Enum):
     @staticmethod
     def from_string(level : str) -> 'LEVELS':
         match level.lower():
+            case 'deep_debug':
+                return LEVELS.DEEP_DEBUG
             case 'debug':
                 return LEVELS.DEBUG
             case 'info':
@@ -154,6 +160,16 @@ class TERMINAL_TARGETS(Enum):
                 return 'stdout'
             case TERMINAL_TARGETS.STDERR:
                 return 'stderr'
+            
+    @staticmethod
+    def from_string(target : str) -> 'TERMINAL_TARGETS':
+        match target.lower():
+            case 'stdout':
+                return TERMINAL_TARGETS.STDOUT
+            case 'stderr':
+                return TERMINAL_TARGETS.STDERR
+            case _:
+                raise ValueError(f"Invalid terminal target: {target}")
 
 class Target:
     __instances = {} #type: dict[str, Target]
@@ -172,7 +188,7 @@ class Target:
     def __new__(cls, target : Callable[[str], None] | TERMINAL_TARGETS, name : str = None):
         if name is None:
             if isinstance(target, TERMINAL_TARGETS):
-                name = str(target)
+                name = name if name is not None else str(target)
             elif hasattr(target, '__name__'):
                 name = target.__name__
             else:
@@ -188,19 +204,20 @@ class Target:
         if isinstance(target, str):
             raise ValueError("The target must be a function or a TERMINAL_TARGETS; use Target.fromFile(file) to create a file target")
         
+        targetFunc = target
         if isinstance(target, TERMINAL_TARGETS):
             match target:
                 case TERMINAL_TARGETS.STDOUT:
-                    target = sys.stdout.write
+                    targetFunc = sys.stdout.write
                 case TERMINAL_TARGETS.STDERR:
-                    target = sys.stderr.write
+                    targetFunc = sys.stderr.write
             self.__type = Target.Type.TERMINAL
-            self.__name = "terminal"
+            self.__name = name if name is not None else str(target)
         else:
             self.__type = Target.Type.FILE
             self.__name = name if name is not None else target.__name__
 
-        self.target = target
+        self.target = targetFunc
         self.properties = {} #type: dict[str, any]
 
     @staticmethod
@@ -211,7 +228,85 @@ class Target:
         with open(file, 'w') as f: # clear the file
             f.write('')
         return Target(writeToFile, file)
-    
+
+    @staticmethod
+    def fromJson(data: str|dict) -> 'Target':
+        """
+        examples of json data:
+        File:
+        ```json
+        {
+            "file": "log.txt",
+            "level": "info",
+            "sensitiveMode": "hide"
+        }
+        ```
+        Stdout (console):
+        ```json	
+        {
+            "name": "stdout",
+            "terminal": "stdout"
+        }
+        ```
+        """
+        if isinstance(data, str):
+            with open(data, 'r') as f:
+                data = loads(f.read()) #type: dict
+                
+        result = None #type: Target
+                
+        if 'file' in data:
+            result = Target.fromFile(data['file'])
+        elif 'terminal' in data:
+            result = Target(TERMINAL_TARGETS.from_string(data['terminal']))
+        else:
+            raise ValueError("The target must be a file or a terminal")
+        
+        if 'name' in data:
+            result.name = data['name']
+        
+        result["level"] = LEVELS.from_string(data['level']) if 'level' in data else LEVELS.INFO
+        result["sensitiveMode"] = SENSITIVE_LEVELS.from_string(data['sensitiveMode']) if 'sensitiveMode' in data else SENSITIVE_LEVELS.HIDE
+        
+        return result
+
+    @staticmethod
+    def fromXml(data: str|ElementTree.Element) -> 'Target':
+        """
+        examples of xml data:
+        File:
+        ```xml
+        <target level="info" sensitiveMode="hide" file="log.txt"/>
+        ```
+        Stdout (console):
+        ```xml
+        <target name="stdout" terminal="stdout"/>
+        ```
+        """
+        if isinstance(data, str):
+            data = ElementTree.parse(data).getroot()
+        
+        result = None
+        
+        if data.tag != 'target':
+            raise ValueError("The root element must be 'target'")
+        
+        if "file" in data.attrib:
+            result = Target.fromFile(data.attrib['file'])
+        elif "terminal" in data.attrib:
+            result = Target(TERMINAL_TARGETS.from_string(data.attrib['terminal']))
+        else:
+            raise ValueError("The target must be a file or a terminal")
+        
+        if 'name' in data.attrib:
+            result.name = data.attrib['name']
+            
+        result["level"] = LEVELS.from_string(data.attrib['level']) if 'level' in data.attrib else LEVELS.INFO
+        result["sensitiveMode"] = SENSITIVE_LEVELS.from_string(data.attrib['sensitiveMode']) if 'sensitiveMode' in data.attrib else SENSITIVE_LEVELS.HIDE
+        
+        return result
+            
+
     def __call__(self, string : str):
         self.target(string)
         
@@ -243,7 +338,11 @@ class Target:
     
     @name.setter
     def name(self, name : str):
+        old_name = self.__name
         self.__name = name
+        del Target.__instances[old_name]
+        Target.__instances[name] = self
+
     
     @staticmethod
     def get(name : str | TERMINAL_TARGETS) -> 'Target':
@@ -269,3 +368,220 @@ class Target:
     @staticmethod
     def register(target : 'Target'):
         Target.__instances[target.name] = target
+
+
+class LoggerConfig:
+    def __init__(self, 
+                 sensitiveDatas : list[str] = [],
+                 targets : list[Target] = [],
+                 moduleMap : dict[str, str] = {},
+    ):
+        self.sensitiveDatas = sensitiveDatas
+        self.targets = targets
+        self.moduleMap = moduleMap
+        
+        
+    def clear(self):
+        self.sensitiveDatas = []
+        self.targets = []
+        self.moduleMap = {}
+        
+    @staticmethod
+    def fromJson(data : str|dict, filePath : str = None) -> 'LoggerConfig':
+        """
+        examples of json data:
+        ```json
+        {
+            "sensitiveDatas": ["password", "token"],
+            "targets": [
+                {
+                    "file": "log.txt",
+                    "level": "info",
+                    "sensitiveMode": "hide"
+                },
+                {
+                    "name": "stdout",
+                    "terminal": "stdout"
+                }
+            ],
+            "moduleMap": {
+                "src/module1.py": "module1",
+                "src/module2.py": "module2"
+            }
+        }
+        """
+        if isinstance(data, str):
+            filePath = data
+            with open(data, 'r') as f:
+                data = loads(f.read()) #type: dict
+            
+        elif filePath is None:
+            raise ValueError("The filePath must be provided when the data is a dict")
+        
+        filePath = os.path.abspath(filePath)
+        folderPath = os.path.dirname(filePath)
+        
+        sensitiveDatas = []
+        targets = []
+        moduleMap = {}
+        
+        if 'sensitiveDatas' in data:
+            sensitiveDatas = data['sensitiveDatas']
+        if 'targets' in data:
+            targets = [Target.fromJson(target) for target in data['targets']]
+        if 'moduleMap' in data:
+            moduleMap = {}
+            for relPath, moduleName in data['moduleMap'].items():
+                absPath = os.path.join(folderPath, relPath)
+                moduleMap[absPath] = moduleName
+        
+        return LoggerConfig(sensitiveDatas, targets, moduleMap)
+    
+    @staticmethod
+    def fromXml(data : str|ElementTree.Element, filePath : str = None) -> 'LoggerConfig':
+        """
+        examples of xml data:
+        ```xml
+        <config>
+            <sensitiveDatas>
+                <data>password</data>
+                <data>token</data>
+            </sensitiveDatas>
+            <targets>
+                <target file='log.txt' level='info' sensitiveMode='hide'/>
+                <target terminal='stdout' name='stdout'/>
+            </targets>
+            <modules>
+                <module src='src/module1.py' name='module1'/>
+                <module src='src/module2.py' name='module2'/>
+            </modules>
+        """
+        if isinstance(data, str):
+            filePath = data
+            data = ElementTree.parse(data).getroot()
+            
+        elif filePath is None:
+            raise ValueError("The filePath must be provided when the data is a ElementTree.Element")
+        
+        filePath = os.path.abspath(filePath)
+        folderPath = os.path.dirname(filePath)
+        
+        moduleMap = {}
+        
+        sensitiveDatas = []
+        targets = []
+        
+        if data.find('sensitiveDatas') is not None:
+            sensitiveDatas = [sensitiveData.text for sensitiveData in data.find('sensitiveDatas')]
+        if data.find('targets') is not None:
+            targets = [Target.fromXml(target) for target in data.find('targets')]
+        if data.find('modules') is not None:
+            """```xml	
+            <modules>
+                <module src='src/module1.py' name='module1'/>
+                <module src='src/module2.py' name='module2'/>
+            </modules>
+            ```"""
+            for module in data.find('modules'):
+                if not "src" in module.attrib or not "name" in module.attrib:
+                    raise ValueError("The module must have a 'src' and a 'name' attribute")
+                relPath = module.attrib['src']
+                abspath = os.path.join(folderPath, relPath)
+                moduleMap[abspath] = module.attrib['name']
+        
+        return LoggerConfig(sensitiveDatas, targets, moduleMap)
+    
+    @staticmethod
+    def fromConfigFile(filePath : str) -> 'LoggerConfig':
+        if filePath.endswith('.json'):
+            return LoggerConfig.fromJson(filePath)
+        elif filePath.endswith('.xml'):
+            return LoggerConfig.fromXml(filePath)
+        else:
+            raise ValueError("The file must be a json or xml file")
+            
+    
+    @staticmethod
+    def configArgParse(parser : argparse.ArgumentParser) -> argparse._ArgumentGroup:
+        """Add the logger configuration arguments to an argparse parser
+
+        Args:
+            parser (argparse.ArgumentParser): The parser to which the arguments will be added
+
+        Returns:
+            argparse._ArgumentGroup: The group of arguments added to the parser
+        """
+        masterGroup = parser.add_argument_group('Logger configuration')
+        
+        masterGroup.add_argument('--config', '-c', type=str, help='The path to the logger configuration file (json or xml)')
+        
+        masterGroup.add_argument('--sensitiveDatas', '-d', nargs='+', help='The list of sensitive datas to hide in the logs, separated by spaces')
+        masterGroup.add_argument('--addTarget', '-t', action="append", nargs='+', help='Add a target to the logger, the arguments are the target configuration (in order: target (stdout, stderr or filename), level (deep-debug, debug, info, warning, error, critical), sensitiveMode (hide, show), sensitiveDatas (list of sensitive datas to hide), name) All arguments are optional exept the target')
+        masterGroup.add_argument('--addModule', '-m', action="append", nargs=2, help='Add a module to the logger, the arguments are the path to the file and the name of the module')
+                
+        return masterGroup
+    
+    def parseArgs(self, args : argparse.Namespace):
+        if args.config is not None:
+            newConfig = LoggerConfig.fromConfigFile(args.config)
+            self.sensitiveDatas = newConfig.sensitiveDatas
+            self.targets = newConfig.targets
+            self.moduleMap = newConfig.moduleMap
+            
+        if args.sensitiveDatas is not None:
+            self.sensitiveDatas = args.sensitiveDatas
+            
+        if args.addTarget is not None:
+            defaultParams = [None, 'info', 'hide', [], None]
+            for targetArgs in args.addTarget:
+                params = defaultParams.copy()
+                params[:len(targetArgs)] = targetArgs #merge the two lists
+                target = None
+                if params[0] in ('stdout', 'stderr'):
+                    target = Target(TERMINAL_TARGETS.from_string(params[0]), params[4])
+                else:
+                    target = Target.fromFile(params[0])
+                    if params[4] is not None:
+                        target.name = params[4]
+                target["level"] = LEVELS.from_string(params[1])
+                target["sensitiveMode"] = SENSITIVE_LEVELS.from_string(params[2])
+                target["sensitiveDatas"] = params[3]
+            
+                self.targets.append(target)
+
+        if args.addModule is not None:
+            for module in args.addModule:
+                self.moduleMap[module[0]] = module[1]
+    
+    def __getitem__(self, key: str) -> any:
+        match key:
+            case 'sensitiveDatas':
+                return self.sensitiveDatas
+            case 'targets':
+                return self.targets
+            case 'moduleMap':
+                return self.moduleMap
+            case _:
+                raise KeyError(f"Parameter {key} not found")
+            
+    def __setitem__(self, key: str, value: any):
+        match key:
+            case 'sensitiveDatas':
+                self.sensitiveDatas = value
+            case 'targets':
+                self.targets = value
+            case 'moduleMap':
+                self.moduleMap = value
+            case _:
+                raise KeyError(f"Parameter {key} not found")
+            
+    def __str__(self):
+        return f"LoggerConfig(sensitiveDatas={self.sensitiveDatas}, targets={list(map(str, self.targets))}, moduleMap={self.moduleMap})"
+            
+            
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='Logger configuration')
+    LoggerConfig.configArgParse(parser)
+    args = parser.parse_args()
+    config = LoggerConfig()
+    config.parseArgs(args)

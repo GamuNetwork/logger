@@ -6,9 +6,9 @@ from json import JSONEncoder
 
 def getCallerInfo():
     """
-    Returns the filename of the caller of the parent function
+    Returns the absolute filepath of the caller of the parent function
     """
-    return os.path.basename(inspect.stack()[1][1])
+    return inspect.stack()[1][1]
 
 def getTime():
     return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -89,6 +89,23 @@ def strictTypeCheck(func):
         return func(*args, **kwargs)
     return wrapper
 
+def splitLongString(string : str, length : int = 100) -> str:
+    """Split a long string into multiple lines, on spaces"""
+    result = []
+    if len(string) <= length:
+        return string
+    
+    tokens = string.split(' ')
+    line = ""
+    for token in tokens:
+        if len(token) > length:
+            raise ValueError(f"Word '{token}' is too long (limit is {length} characters)")
+        if len(line) + len(token) > length:
+            result.append(line.strip())
+            line = ""
+        line += token + ' '
+    result.append(line.strip())
+    return '\n'.join(result)
 
 class CustomJSONEncoder(JSONEncoder):
     def default(self, o):

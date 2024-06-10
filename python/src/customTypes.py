@@ -455,6 +455,7 @@ class LoggerConfig:
                 <module src='src/module1.py' name='module1'/>
                 <module src='src/module2.py' name='module2'/>
             </modules>
+        </config>
         """
         if isinstance(data, str):
             filePath = data

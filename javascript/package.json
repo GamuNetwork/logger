@@ -19,7 +19,7 @@
   "author": "Antoine Buirey, GamuNetwork",
   "license": "ISC",
   "publishConfig": {
-    "registry": "https://npm.pkg.github.com/"
+    "registry": "https://registry.npmjs.org/"
   },
   "dependencies": {
     "@types/node": "^16.11.15",

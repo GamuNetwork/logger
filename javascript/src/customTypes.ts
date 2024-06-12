@@ -1,13 +1,66 @@
 import * as fs from 'fs';
 
-export enum COLORS{
-    RED = "\x1b[91m",
-    DARK_RED = "\x1b[91m\x1b[1m",
-    GREEN = "\x1b[92m",
-    YELLOW = "\x1b[93m",
-    BLUE = "\x1b[94m",
-    RESET = "\x1b[0m",
-    NONE = ""
+import { XMLParser, XMLValidator} from "fast-xml-parser";
+XMLValidator;
+
+export namespace COLORS{
+    export enum COLORS{
+        RED = "\x1b[91m",
+        DARK_RED = "\x1b[91m\x1b[1m",
+        GREEN = "\x1b[92m",
+        YELLOW = "\x1b[93m",
+        BLUE = "\x1b[94m",
+        RESET = "\x1b[0m",
+        NONE = ""
+    }
+
+    export const RED = COLORS.RED;
+    export const DARK_RED = COLORS.DARK_RED;
+    export const GREEN = COLORS.GREEN;
+    export const YELLOW = COLORS.YELLOW;
+    export const BLUE = COLORS.BLUE;
+    export const RESET = COLORS.RESET;
+    export const NONE = COLORS.NONE;
+
+    export function fromString(color : string){
+        switch(color.toLowerCase()){
+            case "red":
+                return COLORS.RED;
+            case "dark_red":
+                return COLORS.DARK_RED;
+            case "green":
+                return COLORS.GREEN;
+            case "yellow":
+                return COLORS.YELLOW;
+            case "blue":
+                return COLORS.BLUE;
+            case "reset":
+                return COLORS.RESET;
+            case "none":
+                return COLORS.NONE;
+            default:
+                throw new Error("Invalid color : " + color);
+        }
+    }
+
+    export function toString(color : COLORS){
+        switch(color){
+            case COLORS.RED:
+                return "red";
+            case COLORS.DARK_RED:
+                return "dark_red";
+            case COLORS.GREEN:
+                return "green";
+            case COLORS.YELLOW:
+                return "yellow";
+            case COLORS.BLUE:
+                return "blue";
+            case COLORS.RESET:
+                return "reset";
+            case COLORS.NONE:
+                return "none";
+        }
+    }
 }
 
 export namespace LEVELS{
@@ -79,21 +132,77 @@ export namespace LEVELS{
                 return COLORS.NONE;
         }
     }
+
+    export function fromString(level : string){
+        switch(level.toLowerCase()){
+            case "deep_debug":
+                return LEVELS.DEEP_DEBUG;
+            case "debug":
+                return LEVELS.DEBUG;
+            case "info":
+                return LEVELS.INFO;
+            case "warning":
+                return LEVELS.WARNING;
+            case "error":
+                return LEVELS.ERROR;
+            case "critical":
+                return LEVELS.CRITICAL;
+            default:
+                throw new Error("Invalid level : " + level);
+        }
+    }
 }
 
-export enum SENSITIVE_LEVELS{
-    HIDE = 10,
-    SHOW
+export namespace SENSITIVE_LEVELS{
+    export enum SENSITIVE_LEVELS{
+        HIDE = 10,
+        SHOW
+    }
+
+    export const HIDE = SENSITIVE_LEVELS.HIDE;
+    export const SHOW = SENSITIVE_LEVELS.SHOW;
 }
 
-export enum TargetType{
-    FILE = 20,
-    TERMINAL
+export namespace TARGET_TYPE{
+    export enum TARGET_TYPE{
+        FILE = 20,
+        TERMINAL
+    }
+
+    export const FILE = TARGET_TYPE.FILE;
+    export const TERMINAL = TARGET_TYPE.TERMINAL;
 }
 
-export enum TERMINAL_TARGETS{
-    STDOUT = 30,
-    STDERR
+export namespace TERMINAL_TARGETS{
+    export enum TERMINAL_TARGETS{
+        STDOUT = 30,
+        STDERR
+    }
+
+    export const STDOUT = TERMINAL_TARGETS.STDOUT;
+    export const STDERR = TERMINAL_TARGETS.STDERR;
+
+    export function fromString(target : string){
+        switch(target.toLowerCase()){
+            case "stdout":
+                return TERMINAL_TARGETS.STDOUT;
+            case "stderr":
+                return TERMINAL_TARGETS.STDERR;
+            default:
+                throw new Error("Invalid terminal target : " + target);
+        }
+    }
+
+    export function toString(target : TERMINAL_TARGETS){
+        switch(target){
+            case TERMINAL_TARGETS.STDOUT:
+                return "stdout";
+            case TERMINAL_TARGETS.STDERR:
+                return "stderr";
+            default:
+                throw new Error("Invalid terminal target : " + target);
+        }
+    }
 }
 
 export class Target{
@@ -101,50 +210,128 @@ export class Target{
     private _target : Function = (_ : string) => {};
     private _name : string = "";
     private _properties : Record<string, any> = {};
-    private _type : TargetType = TargetType.FILE;
+    private _type : TARGET_TYPE.TARGET_TYPE = TARGET_TYPE.FILE;
 
 
-    constructor(targetFunc: Function | TERMINAL_TARGETS, name: string|null = null){
-
-        if(typeof targetFunc == 'number'){
-            switch(targetFunc){
-                case TERMINAL_TARGETS.STDOUT:
-                    targetFunc = process.stdout.write.bind(process.stdout);
-                    break;
-                case TERMINAL_TARGETS.STDERR:
-                    targetFunc = process.stderr.write.bind(process.stderr);
-                    break;
-                default:
-                    throw new Error("Invalid target");
-            }
-            if(name == null){
-                name = "terminal";
-            }
-
-            this._type = TargetType.TERMINAL;
-
+    constructor(target: Function | TERMINAL_TARGETS.TERMINAL_TARGETS, name: string|null = null){
+        if(typeof target == 'function'){
+            this._name = name || target.name;
+            this._target = target;
+            this._type = TARGET_TYPE.FILE;
+        }
+        else if(typeof target == 'string'){
+            throw new Error("Invalid target; use Target.fromFile to create a file target");
         }
         else{
-            if(name == null){
-                name = targetFunc.name;
+            this._name = name || TERMINAL_TARGETS.toString(target);
+            this._type = TARGET_TYPE.TERMINAL;
+            switch(target){
+                case TERMINAL_TARGETS.STDOUT:
+                    this._target = process.stdout.write.bind(process.stdout);
+                    break;
+                case TERMINAL_TARGETS.STDERR:
+                    this._target = process.stderr.write.bind(process.stderr);
+                    break;
+                default:
+                    throw new Error("Invalid target : " + target);
             }
-
-            this._type = TargetType.FILE;
         }
 
-        this._target = targetFunc;
-        this._name = name;
-        if(Target.instances[name]){
-            return Target.instances[name];
+        if(Target.instances[this._name]){
+            return Target.instances[this._name];
         }
-        Target.instances[name] = this;
+
+        Target.instances[this._name] = this;
     }
 
     static fromFile(path: string){
         fs.writeFileSync(path, "");
-        return new Target((message : string) => {
+        const func = (message : string) => {
             fs.appendFileSync(path, message + '\n');
-        }, path);
+        }
+        return new Target(func, path);
+    }
+
+    /*
+        examples of json data:
+        File:
+        ```json
+        {
+            "file": "log.txt",
+            "level": "info",
+            "sensitiveMode": "hide"
+        }
+        ```
+        Stdout (console):
+        ```json	
+        {
+            "name": "stdout",
+            "terminal": "stdout"
+        }
+        ```
+    */
+    static fromJson(data: string|Record<string, any>){
+        let obj = typeof data === 'string' ? JSON.parse(data) : data;
+        
+        let result = null as Target|null;
+
+        if('file' in obj){
+            result = Target.fromFile(obj.file);
+        }
+        else if('terminal' in obj){
+            result = new Target(TERMINAL_TARGETS.fromString(obj.terminal));
+        }
+        else{
+            throw new Error("The target must be a file or a terminal");
+        }
+
+        if('name' in obj){
+            result.name = obj.name;
+        }
+        result.setProperty('level', LEVELS.fromString(obj.level) || LEVELS.INFO);
+        result.setProperty('sensitiveMode', obj.sensitiveMode || SENSITIVE_LEVELS.HIDE);
+
+        return result;
+    }
+
+    /*
+        examples of xml data:
+        File:
+        ```xml
+        <target level="info" sensitiveMode="hide" file="log.txt"/>
+        ```
+        Stdout (console):
+        ```xml
+        <target name="stdout" terminal="stdout"/>
+        ```
+    */
+    static fromXml(data: string|Record<string, any>){
+        const parser = new XMLParser({attributeNamePrefix : "µ_", ignoreAttributes : false});
+        const obj = typeof data === 'string' ? parser.parse(data) : data;
+        
+        let result = null as Target|null;
+
+        if(!obj.target){
+            throw new Error("the root element must be 'target'");
+        }
+
+        if(obj.target.µ_file){
+            result = Target.fromFile(obj.target.µ_file);
+        }
+        else if(obj.target.µ_terminal){
+            result = new Target(TERMINAL_TARGETS.fromString(obj.target.µ_terminal));
+        }
+        else{
+            throw new Error("The target must be a file or a terminal");
+        }
+
+        if(obj.target.µ_name){
+            result.name = obj.target.µ_name;
+        }
+        result.setProperty('level', obj.target.µ_level ? LEVELS.fromString(obj.target.µ_level) : LEVELS.INFO);
+        result.setProperty('sensitiveMode', obj.target.µ_sensitiveMode || SENSITIVE_LEVELS.HIDE);
+    
+        return result;
     }
 
     call(message: string){
@@ -196,5 +383,117 @@ export class Target{
 
     static exist(targetName: string){
         return Target.instances[targetName] != null;
+    }
+
+    static list(){
+        return Object.keys(Target.instances);
+    }
+
+    static clear(){
+        Target.instances = {};
+    }
+}
+
+export class LoggerConfig{
+    public sensitiveDatas : string[] = [];
+    public targets : Target[] = [];
+    public moduleMap : Record<string, string> = {};
+
+    constructor(sensitiveDatas : string[] = [], targets : Target[] = [], moduleMap : Record<string, string> = {}){
+        this.sensitiveDatas = sensitiveDatas;
+        this.targets = targets;
+        this.moduleMap = moduleMap;
+    }
+
+    public clear(){
+        this.sensitiveDatas = [];
+        this.targets = [];
+        this.moduleMap = {};
+    }
+
+    /*
+    examples of json data:
+    ```json
+    {
+        "sensitiveDatas": ["password", "token"],
+        "targets": [
+            {
+                "file": "log.txt",
+                "level": "info",
+                "sensitiveMode": "hide"
+            },
+            {
+                "name": "stdout",
+                "terminal": "stdout"
+            }
+        ],
+        "moduleMap": {
+            "src/module1.py": "module1",
+            "src/module2.py": "module2"
+        }
+    }
+    */
+    public static fromJson(data: string|Record<string, any>){
+        let obj = typeof data === 'string' ? JSON.parse(data) : data;
+        
+        let sensitiveDatas = obj.sensitiveDatas || [];
+        let targets = obj.targets ? obj.targets.map((target : any) => Target.fromJson(target)) : [];
+        let moduleMap = obj.moduleMap || {};
+
+        return new LoggerConfig(sensitiveDatas, targets, moduleMap);
+    }
+
+    /*
+    examples of xml data:
+    ```xml
+    examples of xml data:
+    ```xml
+    <config>
+        <sensitiveDatas>
+            <data>password</data>
+            <data>token</data>
+        </sensitiveDatas>
+        <targets>
+            <target file='log.txt' level='info' sensitiveMode='hide'/>
+            <target terminal='stdout' name='stdout'/>
+        </targets>
+        <modules>
+            <module src='src/module1.py' name='module1'/>
+            <module src='src/module2.py' name='module2'/>
+        </modules>
+    </config>
+    ```
+    */
+    public static fromXml(data: string|Record<string, any>){
+        const parser = new XMLParser({attributeNamePrefix : "µ_", ignoreAttributes : false});
+        const obj = typeof data === 'string' ? parser.parse(data) : data;
+        
+        let sensitiveDatas = obj.config.µ_sensitiveDatas ? obj.config.µ_sensitiveDatas.map((data : any) => data.µ_data) : [];
+        let targets = obj.config.µ_targets ? obj.config.µ_targets.map((target : any) => Target.fromXml(target)) : [];
+        let moduleMap = obj.config.µ_modules ? obj.config.µ_modules.reduce((acc : Record<string, string>, module : any) => {
+            acc[module.µ_src] = module.µ_name;
+            return acc;
+        }, {}) : {};
+
+        return new LoggerConfig(sensitiveDatas, targets, moduleMap);
+    }
+
+    public static fromConfigFile(path: string){
+        if(!fs.existsSync(path)){
+            throw new Error("Config file not found");
+        }
+        if(path.endsWith(".json")){
+            return LoggerConfig.fromJson(fs.readFileSync(path, 'utf8'));
+        }
+        else if(path.endsWith(".xml")){
+            return LoggerConfig.fromXml(fs.readFileSync(path, 'utf8'));
+        }
+        else{
+            throw new Error("The file must be a json or xml file");
+        }
+    }
+
+    public toString(){
+        return "LoggerConfig(sensitiveDatas=[" + this.sensitiveDatas.join(", ") + "], targets=[" + this.targets.map(target => target.toString()).join(", ") + "], moduleMap=" + JSON.stringify(this.moduleMap) + ")";
     }
 }

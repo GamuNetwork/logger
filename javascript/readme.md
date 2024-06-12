@@ -386,7 +386,7 @@
         </table>
     </details>
     <dd><details>
-        <summary>TargetType</summary>
+        <summary>TARGET_TYPE</summary>
         <p>Values used to internally to store if a target is a terminal or a file</p>
         <table>
             <thead>

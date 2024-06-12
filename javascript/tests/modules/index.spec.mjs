@@ -1,28 +1,15 @@
 import { Logger } from '#dist/index.js';
-import { Target, LEVELS, SENSITIVE_LEVELS, TargetType } from '#dist/customTypes.js';
-import { describe } from 'node:test';
+import { Target, LEVELS, SENSITIVE_LEVELS, TARGET_TYPE } from '#dist/customTypes.js';
 
+import tmp from 'tmp';
 import fs from 'fs';
-//redirect stdout to file
-function redirectStream(stream, filename) {
-    let file = fs.createWriteStream(filename);
-    stream.write = file.write.bind(file);
-}
+
+process.stderr.write("index\n");
 
 describe('testing default configuration', () => {
-    it('terminal should exist', () => {
-        expect(Target.exist("terminal")).toBe(true);
-    });
-
-    let terminalTarget = Target.get("terminal");
-    it('sensitiveMode should be HIDE', () => {
-        expect(terminalTarget.getProperty("sensitiveMode")).toBe(SENSITIVE_LEVELS.HIDE);
-    });
-    it('level should be INFO', () => {
-        expect(terminalTarget.getProperty("level")).toBe(LEVELS.INFO);
-    });
-    it('type should be terminal', () => {
-        expect(terminalTarget.type).toBe(TargetType.TERMINAL);
+    it('no targets should be defined', () => {
+        Logger.clear();
+        expect(Target.list().length).toBe(0);
     });
     it('sensitive data list should be empty', () => {
         expect(Logger.repr()["SensitiveDatas"]).toEqual([]);
@@ -32,15 +19,61 @@ describe('testing default configuration', () => {
     });
 });
 
-describe('testing logging functions', () => {
-    // redirectStream(process.stdout, "tests/logs/stdout.log");
-    
+describe('testing logging functions', () => { //deepDebug, debug, info, warning, error, critical
+    it('should log DEEP_DEBUG message', () => {
+        Logger.clear();
+        const randomName = tmp.tmpNameSync();
+        Logger.addTarget(randomName);
+        Logger.setLevel(randomName, LEVELS.DEEP_DEBUG);
+        Logger.deepDebug("Hello World!");
+        const log = fs.readFileSync(randomName, 'utf8');
+        expect(log).toMatch(/\[[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}\] \[  DEBUG   \] Hello World!/);
+        fs.unlinkSync(randomName);
+    });
+    it('should log DEBUG message', () => {
+        Logger.clear();
+        const randomName = tmp.tmpNameSync();
+        Logger.addTarget(randomName);
+        Logger.setLevel(randomName, LEVELS.DEBUG);
+        Logger.debug("Hello World!");
+        const log = fs.readFileSync(randomName, 'utf8');
+        expect(log).toMatch(/\[[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}\] \[  DEBUG   \] Hello World!/);
+        fs.unlinkSync(randomName);
+    });
     it('should log INFO message', () => {
-        process.stdout.write = jasmine.createSpy("stdout").and.callFake(function (data) {
-            // console.log(data);
-            return true;
-        });
-        Logger.info("info message");
-        expect(process.stdout.write).toHaveBeenCalledWith("info message\n");
+        Logger.clear();
+        const randomName = tmp.tmpNameSync();
+        Logger.addTarget(randomName);
+        Logger.info("Hello World!");
+        const log = fs.readFileSync(randomName, 'utf8');
+        expect(log).toMatch(/\[[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}\] \[   INFO   \] Hello World!/);   
+        fs.unlinkSync(randomName);
+    });
+    it('should log WARNING message', () => {
+        Logger.clear();
+        const randomName = tmp.tmpNameSync();
+        Logger.addTarget(randomName);
+        Logger.warning("Hello World!");
+        const log = fs.readFileSync(randomName, 'utf8');
+        expect(log).toMatch(/\[[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}\] \[ WARNING  \] Hello World!/); 
+        fs.unlinkSync(randomName);  
+    });
+    it('should log ERROR message', () => {
+        Logger.clear();
+        const randomName = tmp.tmpNameSync();
+        Logger.addTarget(randomName);
+        Logger.error("Hello World!");
+        const log = fs.readFileSync(randomName, 'utf8');
+        expect(log).toMatch(/\[[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}\] \[  ERROR   \] Hello World!/);  
+        fs.unlinkSync(randomName); 
+    });
+    it('should log CRITICAL message', () => {
+        Logger.clear();
+        const randomName = tmp.tmpNameSync();
+        Logger.addTarget(randomName);
+        Logger.critical("Hello World!");
+        const log = fs.readFileSync(randomName, 'utf8');
+        expect(log).toMatch(/\[[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}\] \[ CRITICAL \] Hello World!/); 
+        fs.unlinkSync(randomName);  
     });
 });

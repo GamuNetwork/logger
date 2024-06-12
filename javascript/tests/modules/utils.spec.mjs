@@ -1,4 +1,9 @@
-import { centerString, getTime, replaceNewLine, GetCallerFileName } from '#dist/utils.js';
+import { centerString, getTime, replaceNewLine, GetCallerFilePath, splitLongString } from '#dist/utils.js';
+import process from 'node:process';
+
+const OS = process.platform;
+
+process.stderr.write("utils\n");
 
 describe('replaceNewLine', () => {
     it('should add indentation to new line', () => {
@@ -26,9 +31,33 @@ describe('getTime', () => {
     });
 });
 
-describe('GetCallerFileName', () => {
-    it('should return caller info', () => {
-        const caller = GetCallerFileName();
+describe('GetCallerFilePath', () => {
+    it('should return caller filepath', () => {
+        const caller = GetCallerFilePath();
         expect(caller).toMatch(/.+jasmine\.js/);
+    });
+    it('should return an absolute path', () => {
+        const caller = GetCallerFilePath();
+        if(OS === 'win32'){
+            expect(caller).toMatch(/^[A-Z]:\\.*jasmine\.js/);
+        }
+        else{
+            expect(caller).toMatch(/^.+jasmine\.js/);
+        }
+    });
+});
+
+describe('splitLongString', () => {
+    it('should split long string', () => {
+        const str = "Hello World!";
+        expect(splitLongString(str, 5)).toBe("Hello\nWorld!");
+    });
+    it('should not split short string', () => {
+        const str = "Hello";
+        expect(splitLongString(str, 5)).toBe("Hello");
+    });
+    it('should split on space', () => {
+        const str = "Hello World!";
+        expect(splitLongString(str, 6)).toBe("Hello\nWorld!");
     });
 });

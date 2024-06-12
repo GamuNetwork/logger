@@ -20,7 +20,7 @@ jobs:
       run: python -m pip install --upgrade pip
     
     - name: Install dependencies
-      run: pip install -r python/requirements.txt
+      run: pip install -r python/install-requirements.txt
 
     - name: Set Package version to tag of release
       run: sed -i "s/{version}/${{ github.event.release.tag_name }}/g" python/pyproject.toml

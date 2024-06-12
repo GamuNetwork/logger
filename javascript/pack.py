@@ -6,26 +6,47 @@ import re
 
 FILEDIR = os.path.dirname(os.path.abspath(__file__))
 
-TSCONFIG_PATH = f"{FILEDIR}/tsconfig.json"
+PACKAGE_JSON_PATH = f"{FILEDIR}/package.json"
+PACKAGE_LOCK_JSON_PATH = f"{FILEDIR}/package-lock.json"
 
 def runTests() -> bool:
     return os.system("npm test") == 0
 
 def savePyproject():
-    shutil.copyfile(TSCONFIG_PATH, TSCONFIG_PATH + ".save")
+    shutil.copyfile(PACKAGE_JSON_PATH, PACKAGE_JSON_PATH + ".save")
+    shutil.copyfile(PACKAGE_LOCK_JSON_PATH, PACKAGE_LOCK_JSON_PATH + ".save")
     
 def restorePyproject():
-    shutil.move(TSCONFIG_PATH + ".save", TSCONFIG_PATH)
+    shutil.move(PACKAGE_JSON_PATH + ".save", PACKAGE_JSON_PATH)
+    shutil.move(PACKAGE_LOCK_JSON_PATH + ".save", PACKAGE_LOCK_JSON_PATH)
     
 def setProjectVersion(version : str):
-    with open(TSCONFIG_PATH, 'r') as file:
-        data = file.read()
-    data = data.replace('{version}', version)
-    with open(TSCONFIG_PATH, 'w') as file:
-        file.write(data)
+    for path in [PACKAGE_JSON_PATH, PACKAGE_LOCK_JSON_PATH]:
+        with open(path, 'r') as file:
+            data = file.read()
+        data = data.replace('{version}', version)
+        with open(path, 'w') as file:
+            file.write(data)
         
 def createPackage():
     os.system("npm run build")
+    
+def publishPackage():
+    os.system("npm publish --access public")
+    
+class VersionedPyProject:
+    def __init__(self, version : str, no_clean = False):
+        self.version = version
+        self.no_clean = no_clean
+        
+    def __enter__(self):
+        savePyproject()
+        setProjectVersion(self.version)
+        return self
+    
+    def __exit__(self, exc_type, exc_value, traceback):
+        if not self.no_clean:
+            restorePyproject()
     
     
     
@@ -36,6 +57,7 @@ if __name__ == '__main__':
         parser.add_argument('-v', '--version', action='version', version='%(prog)s 1.0.0')
         parser.add_argument('-nt', '--no-tests', help='Do not run tests', action='store_true')
         parser.add_argument('-nb', '--no-build', help='Do not build package', action='store_true')
+        parser.add_argument('-p', '--publish', help='Publish package', action='store_true')
         args = parser.parse_args()
         
         if not re.match(r"\d+\.\d+\.\d+", args.pv):
@@ -46,12 +68,14 @@ if __name__ == '__main__':
 
     args = getArgs()
     
-    if not args.no_tests:
-        if not runTests():
-            exit(1)
+    with VersionedPyProject(args.pv, True):
+        if not args.no_tests:
+            if not runTests():
+                exit(1)
 
-    if not args.no_build:
-        savePyproject()
-        setProjectVersion(args.pv)
-        createPackage()
-        restorePyproject()
+        if not args.no_build:
+            createPackage()
+        
+        if args.publish: #not run by default
+            publishPackage()
+            

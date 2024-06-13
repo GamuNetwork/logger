@@ -16,6 +16,8 @@ class Logger{
         }
         Logger._instance = this;
 
+        Logger.addTarget(TERMINAL_TARGETS.STDOUT, LEVELS.INFO, SENSITIVE_LEVELS.HIDE);
+
         return this;
     }
 
@@ -24,12 +26,6 @@ class Logger{
     static setLevel(targetName: string, level: LEVELS.LEVELS){
         let target = Target.get(targetName);
         target.setProperty('level', level);
-    }
-
-    static addDefaultTarget(){
-        if(!Logger._instance._targets.length){
-            Logger.addTarget(TERMINAL_TARGETS.STDOUT);
-        }
     }
 
     static setSensitiveMode(targetName: string, level: SENSITIVE_LEVELS.SENSITIVE_LEVELS){
@@ -77,7 +73,6 @@ class Logger{
 // ------------------- INTERNAL METHODS --------------------
 
     private static log(level : LEVELS.LEVELS, message : string, filename : string){
-        Logger.addDefaultTarget(); //print to terminal if no target is set
         for(let target of Logger._instance._targets){
             if(target.getProperty('level') <= level){
                 let result = "";
@@ -139,7 +134,7 @@ class Logger{
         return result;
     }
 
-    static clear(){
+    static reset(){
         Logger._instance._targets = [];
         Logger._instance._sensitive_data = [];
         Logger._instance._module_map = {};
@@ -207,6 +202,8 @@ function critical(message : string){
 function message(message : string, color = COLORS.NONE){
     Logger.message(message, color);
 }
+
+new Logger(); //initialize the logger
 
 export {
     Logger,

@@ -3,6 +3,12 @@
   "version": "{version}",
   "description": "This is a logger module, allowing to create beautiful log very easily",
   "main": "dist/index.js",
+  "licenses": [
+    {
+      "type": "MIT",
+      "url": "https://opensource.org/licenses/MIT"
+    }
+  ],
   "scripts": {
     "test": "jasmine --config=config/jasmine.json",
     "build": "tsc"

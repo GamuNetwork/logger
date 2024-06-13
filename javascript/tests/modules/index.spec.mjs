@@ -8,7 +8,7 @@ process.stderr.write("index\n");
 
 describe('testing default configuration', () => {
     it('no targets should be defined', () => {
-        Logger.clear();
+        Logger.reset();
         expect(Target.list().length).toBe(0);
     });
     it('sensitive data list should be empty', () => {
@@ -21,7 +21,7 @@ describe('testing default configuration', () => {
 
 describe('testing logging functions', () => { //deepDebug, debug, info, warning, error, critical
     it('should log DEEP_DEBUG message', () => {
-        Logger.clear();
+        Logger.reset();
         const randomName = tmp.tmpNameSync();
         Logger.addTarget(randomName);
         Logger.setLevel(randomName, LEVELS.DEEP_DEBUG);
@@ -31,7 +31,7 @@ describe('testing logging functions', () => { //deepDebug, debug, info, warning,
         fs.unlinkSync(randomName);
     });
     it('should log DEBUG message', () => {
-        Logger.clear();
+        Logger.reset();
         const randomName = tmp.tmpNameSync();
         Logger.addTarget(randomName);
         Logger.setLevel(randomName, LEVELS.DEBUG);
@@ -41,7 +41,7 @@ describe('testing logging functions', () => { //deepDebug, debug, info, warning,
         fs.unlinkSync(randomName);
     });
     it('should log INFO message', () => {
-        Logger.clear();
+        Logger.reset();
         const randomName = tmp.tmpNameSync();
         Logger.addTarget(randomName);
         Logger.info("Hello World!");
@@ -50,7 +50,7 @@ describe('testing logging functions', () => { //deepDebug, debug, info, warning,
         fs.unlinkSync(randomName);
     });
     it('should log WARNING message', () => {
-        Logger.clear();
+        Logger.reset();
         const randomName = tmp.tmpNameSync();
         Logger.addTarget(randomName);
         Logger.warning("Hello World!");
@@ -59,7 +59,7 @@ describe('testing logging functions', () => { //deepDebug, debug, info, warning,
         fs.unlinkSync(randomName);  
     });
     it('should log ERROR message', () => {
-        Logger.clear();
+        Logger.reset();
         const randomName = tmp.tmpNameSync();
         Logger.addTarget(randomName);
         Logger.error("Hello World!");
@@ -68,7 +68,7 @@ describe('testing logging functions', () => { //deepDebug, debug, info, warning,
         fs.unlinkSync(randomName); 
     });
     it('should log CRITICAL message', () => {
-        Logger.clear();
+        Logger.reset();
         const randomName = tmp.tmpNameSync();
         Logger.addTarget(randomName);
         Logger.critical("Hello World!");

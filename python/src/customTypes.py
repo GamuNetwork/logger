@@ -548,7 +548,10 @@ class LoggerConfig:
                 target["sensitiveMode"] = SENSITIVE_LEVELS.from_string(params[2])
                 target["sensitiveDatas"] = params[3]
             
-                self.targets.append(target)
+                if target.name in [t.name for t in self.targets]:
+                    self.targets[[t.name for t in self.targets].index(target.name)] = target
+                else:
+                    self.targets.append(target)
 
         if args.addModule is not None:
             for module in args.addModule:

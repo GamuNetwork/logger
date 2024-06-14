@@ -79,12 +79,12 @@ def strictTypeCheck(func):
         for i, arg in enumerate(args):
             types = func_args[list(func_args.keys())[i]]
             if type(arg) not in types and not Any in types:
-                raise TypeError(f"Argument {i} of function {func.__name__} must be of type ({", ".join(map(type2string, types))})")
+                raise TypeError(f"Argument {i} of function {func.__name__} must be of type ("+", ".join(map(type2string, types)) + ")")
             
         for key, value in kwargs.items():
             types = func_args[key]
             if type(value) not in types and not Any in types:
-                raise TypeError(f"Argument {key} of function {func.__name__} must be of type ({", ".join(map(type2string, types))})")
+                raise TypeError(f"Argument {key} of function {func.__name__} must be of type ("+", ".join(map(type2string, types)) + ")")
         
         return func(*args, **kwargs)
     return wrapper

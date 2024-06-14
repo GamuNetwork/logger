@@ -22,6 +22,7 @@
     "GamuNetwork",
     "Logger"
   ],
+  "readme": "release.md",
   "author": "Antoine Buirey, GamuNetwork",
   "license": "ISC",
   "publishConfig": {

@@ -11,7 +11,7 @@ from gamuLogger import Logger, deepDebug, debug, info, warning, error, critical,
 class Test_Logger:
     def test_deepDebug(self, capsys):
         Logger.reset()
-        Logger.setLevel("terminal", LEVELS.DEEP_DEBUG)
+        Logger.setLevel("stdout", LEVELS.DEEP_DEBUG)
         deepDebug("This is a deep debug message")
         captured = capsys.readouterr()
         result = captured.out
@@ -20,7 +20,7 @@ class Test_Logger:
         
     def test_debug(self, capsys):
         Logger.reset()
-        Logger.setLevel("terminal", LEVELS.DEBUG)
+        Logger.setLevel("stdout", LEVELS.DEBUG)
         debug("This is a debug message")
         captured = capsys.readouterr()
         result = captured.out
@@ -29,7 +29,7 @@ class Test_Logger:
         
     def test_info(self, capsys):
         Logger.reset()
-        Logger.setLevel("terminal", LEVELS.INFO)
+        Logger.setLevel("stdout", LEVELS.INFO)
         info("This is an info message")
         captured = capsys.readouterr()
         result = captured.out
@@ -38,7 +38,7 @@ class Test_Logger:
         
     def test_warning(self, capsys):
         Logger.reset()
-        Logger.setLevel("terminal", LEVELS.WARNING)
+        Logger.setLevel("stdout", LEVELS.WARNING)
         warning("This is a warning message")
         captured = capsys.readouterr()
         result = captured.out
@@ -47,7 +47,7 @@ class Test_Logger:
         
     def test_error(self, capsys):
         Logger.reset()
-        Logger.setLevel("terminal", LEVELS.ERROR)
+        Logger.setLevel("stdout", LEVELS.ERROR)
         error("This is an error message")
         captured = capsys.readouterr()
         result = captured.out
@@ -56,7 +56,7 @@ class Test_Logger:
         
     def test_critical(self, capsys):
         Logger.reset()
-        Logger.setLevel("terminal", LEVELS.CRITICAL)
+        Logger.setLevel("stdout", LEVELS.CRITICAL)
         critical("This is a critical message")
         captured = capsys.readouterr()
         result = captured.out
@@ -65,7 +65,7 @@ class Test_Logger:
         
     def test_message(self, capsys):
         Logger.reset()
-        Logger.setLevel("terminal", LEVELS.INFO)
+        Logger.setLevel("stdout", LEVELS.INFO)
         message("This is a message")
         captured = capsys.readouterr()
         result = captured.out
@@ -74,7 +74,7 @@ class Test_Logger:
         
     def test_multiline(self, capsys):
         Logger.reset()
-        Logger.setLevel("terminal", LEVELS.INFO)
+        Logger.setLevel("stdout", LEVELS.INFO)
         info("This is a message\nThis is a message")
         captured = capsys.readouterr()
         result = captured.out
@@ -83,7 +83,7 @@ class Test_Logger:
         
     def test_module(self, capsys):
         Logger.reset()
-        Logger.setLevel("terminal", LEVELS.INFO)
+        Logger.setLevel("stdout", LEVELS.INFO)
         Logger.setModule("test")
         info("This is a message")
         captured = capsys.readouterr()
@@ -93,7 +93,7 @@ class Test_Logger:
         
     def test_multiline_module(self, capsys):
         Logger.reset()
-        Logger.setLevel("terminal", LEVELS.INFO)
+        Logger.setLevel("stdout", LEVELS.INFO)
         Logger.setModule("test")
         info("This is a message\nThis is a message")
         captured = capsys.readouterr()
@@ -108,7 +108,7 @@ class Test_Logger:
             
     def test_chrono(self, capsys):
         Logger.reset()
-        Logger.setLevel("terminal", LEVELS.DEBUG)
+        Logger.setLevel("stdout", LEVELS.DEBUG)
         
         @chrono
         def test():
@@ -122,7 +122,7 @@ class Test_Logger:
         
     def test_deepDebugFunc(self, capsys):
         Logger.reset()
-        Logger.setLevel("terminal", LEVELS.DEEP_DEBUG)
+        Logger.setLevel("stdout", LEVELS.DEEP_DEBUG)
         
         @deepDebugFunc(True)
         def test():
@@ -140,7 +140,7 @@ class Test_Logger:
         
     def test_debugFunc(self, capsys):
         Logger.reset()
-        Logger.setLevel("terminal", LEVELS.DEBUG)
+        Logger.setLevel("stdout", LEVELS.DEBUG)
         
         @debugFunc(False)
         def test():
@@ -158,11 +158,11 @@ class Test_Logger:
         
     def test_setLevel(self, capsys):
         Logger.reset()
-        Logger.setLevel("terminal", LEVELS.INFO)
+        Logger.setLevel("stdout", LEVELS.INFO)
         
         debug("This is a debug message that should not be displayed")
         
-        Logger.setLevel("terminal", LEVELS.DEBUG)
+        Logger.setLevel("stdout", LEVELS.DEBUG)
         
         debug("This is a debug message that should be displayed")
         
@@ -176,7 +176,7 @@ class Test_Logger:
         
         data = "abcdefg"
         
-        Logger.setSensitiveMode("terminal", SENSITIVE_LEVELS.HIDE)
+        Logger.setSensitiveMode("stdout", SENSITIVE_LEVELS.HIDE)
         Logger.addSensitiveData(data)
         info("This is a message with a password: " + data)
         
@@ -186,7 +186,7 @@ class Test_Logger:
         
         assert data not in result
         
-        Logger.setSensitiveMode("terminal", SENSITIVE_LEVELS.SHOW)
+        Logger.setSensitiveMode("stdout", SENSITIVE_LEVELS.SHOW)
         Logger.addSensitiveData(data)
         
         info("This is a message with a password: " + data)

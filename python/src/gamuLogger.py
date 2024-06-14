@@ -18,9 +18,9 @@ class Logger:
             
             #configuring default target
             if len(cls.__instance.config["targets"]) == 0:
-                cls.__instance.config["targets"] = [Target(TERMINAL_TARGETS.STDOUT, "terminal")]
-                Target.get("terminal")["level"] = LEVELS.INFO
-                Target.get("terminal")["sensitiveMode"] = SENSITIVE_LEVELS.HIDE
+                cls.__instance.config["targets"] = [Target(TERMINAL_TARGETS.STDOUT)]
+                Target.get("stdout")["level"] = LEVELS.INFO
+                Target.get("stdout")["sensitiveMode"] = SENSITIVE_LEVELS.HIDE
         return cls.__instance    
     
 #---------------------------------------- Internal methods ----------------------------------------
@@ -183,9 +183,9 @@ class Logger:
         Logger().config.clear()
         
         #configuring default target
-        Logger.__instance.config["targets"] = [Target(TERMINAL_TARGETS.STDOUT, "terminal")]
-        Target.get("terminal")["level"] = LEVELS.INFO
-        Target.get("terminal")["sensitiveMode"] = SENSITIVE_LEVELS.HIDE
+        Logger.__instance.config["targets"] = [Target(TERMINAL_TARGETS.STDOUT)]
+        Target.get("stdout")["level"] = LEVELS.INFO
+        Target.get("stdout")["sensitiveMode"] = SENSITIVE_LEVELS.HIDE
         
     @staticmethod
     @strictTypeCheck
@@ -295,7 +295,11 @@ def debugFunc(chrono : bool = False):
             debug(f"Calling {func.__name__} with\nargs: {args}\nkwargs: {kwargs}")
             if chrono:
                 start = datetime.now()
-            result = func(*args, **kwargs)
+            try:
+                result = func(*args, **kwargs)
+            except Exception as e:
+                error(f"An error occured in function {func.__name__}: {e.__class__.__name__} - {e}")
+                raise e
             if chrono:
                 end = datetime.now()
                 debug(f"Function {func.__name__} took {end-start} to execute and returned \"{result}\"")

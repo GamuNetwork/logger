@@ -1,6 +1,5 @@
 # <div align="center">Gamu Logger - Javascript Version</div>
 
-### <div align="center"><a href="../readme.md">🏠 Main page</a> | <a href="../python/readme.md">🐍 Python</a> | 🌐 Javascript</div>
 
 ## <div align="center">📚 Table of Contents</div>
 <div align="center">
@@ -81,4 +80,4 @@ you can find examples in the [example](./example) directory.
 
 ## <div align="center">📜 License</div>
 
-This project is licensed under the MIT License - see the [LICENSE](../LICENSE) file for details.
+This project is licensed under the MIT License - see the [LICENSE](./LICENSE) file for details.

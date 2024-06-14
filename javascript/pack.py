@@ -12,6 +12,9 @@ PACKAGE_LOCK_JSON_PATH = f"{FILEDIR}/package-lock.json"
 def runTests() -> bool:
     return os.system("npm test") == 0
 
+def copyLicense() -> None:
+    shutil.copyfile(f"{FILEDIR}/../LICENSE", f"{FILEDIR}/LICENSE")
+
 def savePyproject():
     shutil.copyfile(PACKAGE_JSON_PATH, PACKAGE_JSON_PATH + ".save")
     shutil.copyfile(PACKAGE_LOCK_JSON_PATH, PACKAGE_LOCK_JSON_PATH + ".save")

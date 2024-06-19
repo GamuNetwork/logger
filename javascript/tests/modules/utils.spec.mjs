@@ -3,8 +3,6 @@ import process from 'node:process';
 
 const OS = process.platform;
 
-process.stderr.write("utils\n");
-
 describe('replaceNewLine', () => {
     it('should add indentation to new line', () => {
         const str = "Hello\nWorld!";

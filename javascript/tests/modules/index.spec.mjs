@@ -4,8 +4,6 @@ import { Target, LEVELS, SENSITIVE_LEVELS, TARGET_TYPE } from '#dist/customTypes
 import tmp from 'tmp';
 import fs from 'fs';
 
-process.stderr.write("index\n");
-
 describe('testing default configuration', () => {
     it('no targets should be defined', () => {
         Logger.reset();

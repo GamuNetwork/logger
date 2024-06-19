@@ -3,8 +3,6 @@ const { Target, TARGET_TYPE, TERMINAL_TARGETS, LoggerConfig } = customTypes;
 import tmp from 'tmp';
 import fs from 'fs';
 
-process.stderr.write("customTypes\n");
-
 // ------------------- Target -------------------
 
 describe('testing Target.constructor', () => {

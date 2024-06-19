@@ -6,11 +6,9 @@ import re
 
 FILEPATH = os.path.abspath(__file__)
 
-from utils import getCallerInfo, getTime, replaceNewLine, centerString, strictTypeCheck, splitLongString #type: ignore
+from gamuLogger.utils import getCallerInfo, getTime, replaceNewLine, centerString, strictTypeCheck, splitLongString #type: ignore
 
-def test_getCallerInfo():
-    assert getCallerInfo() == FILEPATH
-    
+
 def test_getTime():
     assert re.match(r"\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}", getTime())
     

@@ -2,9 +2,10 @@ from sys import stdout, stderr
 from datetime import datetime
 from typing import Any, Callable, List
 import argparse
-from utils import getCallerInfo, getTime, replaceNewLine, centerString, strictTypeCheck, CustomJSONEncoder, splitLongString
-from customTypes import COLORS, LEVELS, SENSITIVE_LEVELS, Target, TERMINAL_TARGETS, LoggerConfig
 from json import dumps
+
+from .utils import getCallerInfo, getTime, replaceNewLine, centerString, strictTypeCheck, CustomJSONEncoder, splitLongString
+from .customTypes import COLORS, LEVELS, SENSITIVE_LEVELS, Target, TERMINAL_TARGETS, LoggerConfig
 
 
 class Logger:
@@ -96,7 +97,7 @@ class Logger:
     @staticmethod
     @strictTypeCheck
     def info(message : Any, filename = getCallerInfo()):
-        Logger().__print(LEVELS.INFO, message, getCallerInfo())
+        Logger().__print(LEVELS.INFO, message, filename)
     
     @staticmethod
     @strictTypeCheck
@@ -150,6 +151,7 @@ class Logger:
             raise ValueError("Module name should be less than 10 characters")
         else:
             Logger().config['moduleMap'][getCallerInfo()] = name
+            
         
     @staticmethod
     @strictTypeCheck

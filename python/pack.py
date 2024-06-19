@@ -1,57 +1,22 @@
-import os
-import sys
-import shutil 
-import argparse
-import re
+from builderTool import BaseBuilder, PYTHON, NULL_TARGET, Logger
+import shutil
 
-FILEDIR = os.path.dirname(os.path.abspath(__file__))
 
-PYPROJECT_PATH = f"{FILEDIR}/pyproject.toml"
-
-def runTests() -> bool:
-    return os.system(sys.executable + " -m pytest") == 0
-
-def savePyproject():
-    shutil.copyfile(PYPROJECT_PATH, PYPROJECT_PATH + ".save")
-    
-def restorePyproject():
-    shutil.move(PYPROJECT_PATH + ".save", PYPROJECT_PATH)
-    
-def setProjectVersion(version : str):
-    with open(PYPROJECT_PATH, 'r') as file:
-        data = file.read()
-    data = data.replace('{version}', version)
-    with open(PYPROJECT_PATH, 'w') as file:
-        file.write(data)
+class Builder(BaseBuilder):
+    def Setup(self):
+        shutil.copytree('src', self.tempDir + '/src')
+        self.CopyAndReplaceByPackageVersion('pyproject.toml', self.tempDir + '/pyproject.toml')
+        shutil.copyfile('readme.md', self.tempDir + '/readme.md')
+        shutil.copyfile('../LICENSE', self.tempDir + '/LICENSE')
+        shutil.copyfile('install-requirements.txt', self.tempDir + '/install-requirements.txt')
         
-def createPackage():
-    os.system(sys.executable + f" -m build {FILEDIR}")
-    
-    
-    
-if __name__ == '__main__':
-    def getArgs() -> argparse.Namespace:
-        parser = argparse.ArgumentParser(description='Python project build script')
-        parser.add_argument('-pv', help='Set project version', default="0.0.0", type=str, metavar='x.y.z')
-        parser.add_argument('-v', '--version', action='version', version='%(prog)s 1.0.0')
-        parser.add_argument('-nt', '--no-tests', help='Do not run tests', action='store_true')
-        parser.add_argument('-nb', '--no-build', help='Do not build package', action='store_true')
-        args = parser.parse_args()
+        self.runCommand(f"{PYTHON} -m pip install -r install-requirements.txt")
         
-        if not re.match(r"\d+\.\d+\.\d+", args.pv):
-            print("Invalid version format; must be in the form of 'x.y.z', where x, y, and z are integers")
-            sys.exit(1)
-        
-        return args
-
-    args = getArgs()
+    def Build(self):
+        return self.runCommand(f"{PYTHON} -m build {self.tempDir} --outdir {self.distDir}")
     
-    if not args.no_tests:
-        if not runTests():
-            exit(1)
+    def Tests(self):
+        shutil.copytree('tests', self.tempDir + '/tests')
+        return self.runCommand(f"{PYTHON} -m pytest {self.tempDir}/tests")
 
-    if not args.no_build:
-        savePyproject()
-        setProjectVersion(args.pv)
-        createPackage()
-        restorePyproject()
+BaseBuilder.execute()

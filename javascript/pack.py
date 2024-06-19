@@ -1,84 +1,50 @@
-import os
-import sys
-import shutil 
-import argparse
-import re
+from builderTool import BaseBuilder, NULL_TARGET, Logger
+import shutil, os
+from tempfile import mkstemp
 
-FILEDIR = os.path.dirname(os.path.abspath(__file__))
-
-PACKAGE_JSON_PATH = f"{FILEDIR}/package.json"
-PACKAGE_LOCK_JSON_PATH = f"{FILEDIR}/package-lock.json"
-
-def runTests() -> bool:
-    return os.system("npm test") == 0
-
-def copyLicense() -> None:
-    shutil.copyfile(f"{FILEDIR}/../LICENSE", f"{FILEDIR}/LICENSE")
-
-def savePyproject():
-    shutil.copyfile(PACKAGE_JSON_PATH, PACKAGE_JSON_PATH + ".save")
-    shutil.copyfile(PACKAGE_LOCK_JSON_PATH, PACKAGE_LOCK_JSON_PATH + ".save")
-    
-def restorePyproject():
-    shutil.move(PACKAGE_JSON_PATH + ".save", PACKAGE_JSON_PATH)
-    shutil.move(PACKAGE_LOCK_JSON_PATH + ".save", PACKAGE_LOCK_JSON_PATH)
-    
-def setProjectVersion(version : str):
-    for path in [PACKAGE_JSON_PATH, PACKAGE_LOCK_JSON_PATH]:
-        with open(path, 'r') as file:
-            data = file.read()
-        data = data.replace('{version}', version)
-        with open(path, 'w') as file:
-            file.write(data)
+class Builder(BaseBuilder):
+    def Setup(self):
+        Logger.debug("Copying LICENSE, package.json and package-lock.json")
+        shutil.copyfile("../LICENSE", self.tempDir+"/LICENSE")
+        self.CopyAndReplaceByPackageVersion("package.json", self.tempDir+"/package.json")
+        self.CopyAndReplaceByPackageVersion("package-lock.json", self.tempDir+"/package-lock.json")
         
-def createPackage():
-    os.system("npm run build")
-    
-def publishPackage():
-    os.system("npm publish --access public")
-    
-class VersionedPyProject:
-    def __init__(self, version : str, no_clean = False):
-        self.version = version
-        self.no_clean = no_clean
+        Logger.debug("Copying config files")
+        shutil.copytree("config", self.tempDir+"/config")
         
-    def __enter__(self):
-        savePyproject()
-        setProjectVersion(self.version)
-        return self
-    
-    def __exit__(self, exc_type, exc_value, traceback):
-        if not self.no_clean:
-            restorePyproject()
-    
-    
-    
-if __name__ == '__main__':
-    def getArgs() -> argparse.Namespace:
-        parser = argparse.ArgumentParser(description='Python project build script')
-        parser.add_argument('-pv', help='Set project version', default="0.0.0", type=str, metavar='x.y.z')
-        parser.add_argument('-v', '--version', action='version', version='%(prog)s 1.0.0')
-        parser.add_argument('-nt', '--no-tests', help='Do not run tests', action='store_true')
-        parser.add_argument('-nb', '--no-build', help='Do not build package', action='store_true')
-        parser.add_argument('-p', '--publish', help='Publish package', action='store_true')
-        args = parser.parse_args()
+        # copy sources
+        Logger.debug("Copying sources")
+        shutil.copytree("src", self.tempDir+"/src")        
         
-        if not re.match(r"\d+\.\d+\.\d+", args.pv):
-            print("Invalid version format; must be in the form of 'x.y.z', where x, y, and z are integers")
-            sys.exit(1)
+        #install node modules
+        Logger.debug("Installing node modules")
+        os.system(f"cd {self.tempDir} && npm install > {NULL_TARGET}")
         
-        return args
+        
+    def Build(self):
+        fd, logfile = mkstemp()
+        
+        Logger.debug("Cpoying tsconfig.json")
+        shutil.copyfile("tsconfig.json", self.tempDir+"/tsconfig.json")
+        
+        Logger.debug("Building project")
+        exitCode = os.system(f"cd {self.tempDir} && npm run build > {logfile}") # build to dist directory in temp, for publishing
+        if exitCode != 0:
+            Logger.error("Build failed : \n"+open(logfile).read())
+            os.remove(logfile)
+            return False
+        os.remove(logfile)
+        return True
 
-    args = getArgs()
-    
-    with VersionedPyProject(args.pv, True):
-        if not args.no_tests:
-            if not runTests():
-                exit(1)
-
-        if not args.no_build:
-            createPackage()
         
-        if args.publish: #not run by default
-            publishPackage()
-            
+    def Tests(self):
+        Logger.debug("copying tests")
+        shutil.copytree("tests", self.tempDir+"/tests")
+        Logger.debug("Running tests")
+        return os.system(f"cd {self.tempDir} && npm test > {NULL_TARGET}") == 0
+    
+    
+    def Publish(self):
+        os.system(f"cd {self.tempDir} && npm publish --access public")
+        
+BaseBuilder.execute()

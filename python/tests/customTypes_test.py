@@ -5,7 +5,7 @@ import tempfile
 
 from xml.etree import ElementTree as ET
 
-from customTypes import COLORS, LEVELS, SENSITIVE_LEVELS, TERMINAL_TARGETS, Target, LoggerConfig #type: ignore
+from gamuLogger.customTypes import COLORS, LEVELS, SENSITIVE_LEVELS, TERMINAL_TARGETS, Target, LoggerConfig #type: ignore
 
 class TempFile:
     def __enter__(self):

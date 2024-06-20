@@ -18,15 +18,14 @@ jobs:
     
     - name: Update pip
       run: python -m pip install --upgrade pip
-    
-    - name: Install dependencies
-      run: pip install -r python/install-requirements.txt
 
-    - name: Set Package version to tag of release
-      run: sed -i "s/{version}/${{ github.event.release.tag_name }}/g" python/pyproject.toml
+    - name: Install builder tool
+      run : pip install https://github.com/GamuNetwork/devtools/releases/download/1.5.3/build_tool-1.5.3-py3-none-any.whl
 
-    - name: Build
-      run: python -m build python
+      
+    - name: build
+      run : cd python && python pack.py -pv ${{ github.event.release.tag_name }} --debug
+
 
     - name: Publish
       uses: AButler/upload-release-assets@v3.0

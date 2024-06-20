@@ -5,6 +5,8 @@ import shutil
 class Builder(BaseBuilder):
     def Setup(self):
         shutil.copytree('src', self.tempDir + '/src')
+        self.CopyAndReplaceByPackageVersion('src/gamuLogger/__init__.py', self.tempDir + '/src/gamuLogger/__init__.py')
+        
         self.CopyAndReplaceByPackageVersion('pyproject.toml', self.tempDir + '/pyproject.toml')
         shutil.copyfile('readme.md', self.tempDir + '/readme.md')
         shutil.copyfile('../LICENSE', self.tempDir + '/LICENSE')

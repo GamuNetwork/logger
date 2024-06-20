@@ -22,29 +22,23 @@ class Builder(BaseBuilder):
         
         
     def Build(self):
-        fd, logfile = mkstemp()
         
-        Logger.debug("Cpoying tsconfig.json")
+        Logger.debug("copying tsconfig.json")
         shutil.copyfile("tsconfig.json", self.tempDir+"/tsconfig.json")
         
         Logger.debug("Building project")
-        exitCode = os.system(f"cd {self.tempDir} && npm run build > {logfile}") # build to dist directory in temp, for publishing
-        if exitCode != 0:
-            Logger.error("Build failed : \n"+open(logfile).read())
-            os.remove(logfile)
-            return False
-        os.remove(logfile)
-        return True
-
+        assert self.runCommand("npm run build")
+        
+        
         
     def Tests(self):
         Logger.debug("copying tests")
         shutil.copytree("tests", self.tempDir+"/tests")
         Logger.debug("Running tests")
-        return os.system(f"cd {self.tempDir} && npm test > {NULL_TARGET}") == 0
+        return self.runCommand(f"npm test")
     
     
     def Publish(self):
-        os.system(f"cd {self.tempDir} && npm publish --access public")
+        self.runCommand(f"npm publish --access public")
         
 BaseBuilder.execute()

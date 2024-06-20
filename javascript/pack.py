@@ -18,7 +18,7 @@ class Builder(BaseBuilder):
         
         #install node modules
         Logger.debug("Installing node modules")
-        os.system(f"cd {self.tempDir} && npm install > {NULL_TARGET}")
+        return self.runCommand("npm ci")
         
         
     def Build(self):
@@ -27,7 +27,7 @@ class Builder(BaseBuilder):
         shutil.copyfile("tsconfig.json", self.tempDir+"/tsconfig.json")
         
         Logger.debug("Building project")
-        assert self.runCommand("npm run build")
+        return self.runCommand("npm run build")
         
         
         

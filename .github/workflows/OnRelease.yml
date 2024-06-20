@@ -61,12 +61,10 @@ jobs:
 
     - name: Install builder tool
       run : pip install https://github.com/GamuNetwork/devtools/releases/download/1.5.4/build_tool-1.5.4-py3-none-any.whl
-
       
     - name: build
-      run : cd javascript && python pack.py -pv ${{ github.event.release.tag_name }} --debug
-
-    - run: cd javascript && npm publish --provenance --access public
+      run : cd javascript && python pack.py -pv ${{ github.event.release.tag_name }} --debug --publish
       env:
         NODE_AUTH_TOKEN: ${{secrets.NPM_TOKEN}}
+
 

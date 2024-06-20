@@ -20,7 +20,7 @@ jobs:
       run: python -m pip install --upgrade pip
 
     - name: Install builder tool
-      run : pip install https://github.com/GamuNetwork/devtools/releases/download/1.5.3/build_tool-1.5.3-py3-none-any.whl
+      run : pip install https://github.com/GamuNetwork/devtools/releases/download/1.5.4/build_tool-1.5.4-py3-none-any.whl
 
 
     - name: build
@@ -60,7 +60,7 @@ jobs:
       run: python -m pip install --upgrade pip
 
     - name: Install builder tool
-      run : pip install https://github.com/GamuNetwork/devtools/releases/download/1.5.3/build_tool-1.5.3-py3-none-any.whl
+      run : pip install https://github.com/GamuNetwork/devtools/releases/download/1.5.4/build_tool-1.5.4-py3-none-any.whl
 
       
     - name: build

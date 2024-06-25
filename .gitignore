@@ -3,3 +3,5 @@
 *.report.json
 .vscode
 *.save
+
+env/

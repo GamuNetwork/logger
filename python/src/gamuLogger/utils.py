@@ -18,7 +18,7 @@ def getCallerFilePath(stack = inspect.stack()) -> str:
     """
     Returns the absolute filepath of the caller of the parent function
     """
-    return os.path.abspath(stack[1][1])
+    return os.path.abspath(stack[2][1])
 
 def getCallerFunctionName(stack = inspect.stack()):
     """

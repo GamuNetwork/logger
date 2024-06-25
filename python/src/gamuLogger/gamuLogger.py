@@ -51,7 +51,7 @@ class Logger:
         if type(message) in [int, float, bool]:
             message = str(message)
         elif type(message) == str:
-            message = splitLongString(message, 100)
+            message = splitLongString(message, 150)
         else:
             message = dumps(message, indent=4, cls=CustomJSONEncoder)
         
@@ -147,7 +147,7 @@ class Logger:
     def setModule(name : str):
         if name == "":
             del Logger().config['moduleMap'][getCallerInfo()]
-        elif len(name) > 10:
+        elif len(name) > 15:
             raise ValueError("Module name should be less than 10 characters")
         else:
             Logger().config['moduleMap'][getCallerInfo()] = name

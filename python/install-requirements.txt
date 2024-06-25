@@ -1,5 +1,5 @@
 build==1.2.1
-build-tool @ https://github.com/GamuNetwork/devtools/releases/download/1.5.7/build_tool-1.5.7-py3-none-any.whl#sha256=fe0b2bc2e8b339d864f07c473acc1fe4ee3dfc80a7c30b39a385d1d5a98c775a
+build-tool @ https://github.com/GamuNetwork/devtools/releases/download/1.5.8/build_tool-1.5.8-py3-none-any.whl
 exceptiongroup==1.2.1
 iniconfig==2.0.0
 packaging==24.0

@@ -44,9 +44,9 @@ class Logger:
         
         if filename in self.config['moduleMap']:
             if target.type == Target.Type.TERMINAL:
-                result += f" [ {COLORS.BLUE}{centerString(self.config['moduleMap'][filename], 10)}{COLORS.RESET} ]"
+                result += f" [ {COLORS.BLUE}{centerString(self.config['moduleMap'][filename], 15)}{COLORS.RESET} ]"
             else:
-                result += f" [ {centerString(self.config['moduleMap'][filename], 10)} ]"
+                result += f" [ {centerString(self.config['moduleMap'][filename], 15)} ]"
             
         if type(message) in [int, float, bool]:
             message = str(message)
@@ -55,7 +55,7 @@ class Logger:
         else:
             message = dumps(message, indent=4, cls=CustomJSONEncoder)
         
-        result += " " + replaceNewLine(message, 33 + (15 if filename in self.config['moduleMap'] else 0))
+        result += " " + replaceNewLine(message, 33 + (20 if filename in self.config['moduleMap'] else 0))
         result = self.__parseSensitive(result, target)
         target(result+"\n")
             

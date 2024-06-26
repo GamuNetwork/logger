@@ -87,14 +87,14 @@ class Logger{
                 if(target.type === TARGET_TYPE.TERMINAL){
                     result = `[${COLORS.BLUE.toString()}${getTime()}${COLORS.RESET.toString()}] [${LEVELS.getColor(level)}${LEVELS.toString(level)}${COLORS.RESET.toString()}] `;
                     if(moduleName){
-                        result += `[ ${COLORS.BLUE.toString()}${centerString(moduleName, 10)}${COLORS.RESET.toString()} ] `;
+                        result += `[ ${COLORS.BLUE.toString()}${centerString(moduleName, 15)}${COLORS.RESET.toString()} ] `;
                     }
                 }
                 else{
                     //same as terminal but without colors
                     result = `[${getTime()}] [${LEVELS.toString(level)}] `;
                     if(moduleName){
-                        result += `[ ${centerString(moduleName, 10)} ] `;
+                        result += `[ ${centerString(moduleName, 15)} ] `;
                     }
                 }
                 result += message + "\n";

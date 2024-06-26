@@ -85,33 +85,39 @@ class Logger:
 #---------------------------------------- Logging methods -----------------------------------------
             
     @staticmethod
-    @strictTypeCheck
-    def deepDebug(message : Any, filename = getCallerInfo()):
+    def deepDebug(message : Any, filename = None):
+        if filename is None:
+            filename = getCallerInfo()
         Logger().__print(LEVELS.DEEP_DEBUG, message, filename)
 
     @staticmethod
-    @strictTypeCheck
-    def debug(message : Any, filename = getCallerInfo()):
+    def debug(message : Any, filename = None):
+        if filename is None:
+            filename = getCallerInfo()
         Logger().__print(LEVELS.DEBUG, message, filename)
     
     @staticmethod
-    @strictTypeCheck
-    def info(message : Any, filename = getCallerInfo()):
+    def info(message : Any, filename = None):
+        if filename is None:
+            filename = getCallerInfo()
         Logger().__print(LEVELS.INFO, message, filename)
     
     @staticmethod
-    @strictTypeCheck
-    def warning(message : Any, filename = getCallerInfo()):
+    def warning(message : Any, filename = None):
+        if filename is None:
+            filename = getCallerInfo()
         Logger().__print(LEVELS.WARNING, message, filename)
         
     @staticmethod
-    @strictTypeCheck
-    def error(message : Any, filename = getCallerInfo()):
+    def error(message : Any, filename = None):
+        if filename is None:
+            filename = getCallerInfo()
         Logger().__print(LEVELS.ERROR, message, filename)
         
     @staticmethod
-    @strictTypeCheck
-    def critical(message : Any, filename = getCallerInfo()):
+    def critical(message : Any, filename = None):
+        if filename is None:
+            filename = getCallerInfo()
         Logger().__print(LEVELS.CRITICAL, message, filename)
         
     @staticmethod
@@ -143,12 +149,11 @@ class Logger:
             Logger().__printMessageInTarget("Sensitive mode was disable, this file may contain sensitive information, please do not share it with anyone", COLORS.YELLOW, target)
         
     @staticmethod
-    @strictTypeCheck
     def setModule(name : str):
         if name == "":
             del Logger().config['moduleMap'][getCallerInfo()]
         elif len(name) > 15:
-            raise ValueError("Module name should be less than 10 characters")
+            raise ValueError("Module name should be less than 15 characters")
         else:
             Logger().config['moduleMap'][getCallerInfo()] = name
             
@@ -200,27 +205,21 @@ class Logger:
         Logger.__instance.config.parseArgs(args)
         
             
-@strictTypeCheck
 def deepDebug(message : Any):
     Logger.deepDebug(message, getCallerInfo())
         
-@strictTypeCheck
 def debug(message : Any):
     Logger.debug(message, getCallerInfo())
 
-@strictTypeCheck
 def info(message : Any):
     Logger.info(message, getCallerInfo())
 
-@strictTypeCheck
 def warning(message : Any):
     Logger.warning(message, getCallerInfo())
     
-@strictTypeCheck
 def error(message : Any):
     Logger.error(message, getCallerInfo())
 
-@strictTypeCheck
 def critical(message : Any):
     Logger.critical(message, getCallerInfo())
     

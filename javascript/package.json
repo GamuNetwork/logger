@@ -3,26 +3,39 @@
   "version": "{version}",
   "description": "This is a logger module, allowing to create beautiful log very easily",
   "main": "dist/index.js",
+  "licenses": [
+    {
+      "type": "MIT",
+      "url": "https://opensource.org/licenses/MIT"
+    }
+  ],
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "jasmine --config=config/jasmine.json",
     "build": "tsc"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/GamuNetwork/logger.git"
+    "url": "git+https://github.com/GamuNetwork/logger.git"
   },
   "keywords": [
     "Gamu",
     "GamuNetwork",
     "Logger"
   ],
+  "readme": "release.md",
   "author": "Antoine Buirey, GamuNetwork",
   "license": "ISC",
   "publishConfig": {
-    "registry": "https://npm.pkg.github.com/"
+    "registry": "https://registry.npmjs.org/"
   },
   "dependencies": {
-    "typescript": "^5.4.5",
-    "@types/node": "^16.11.15"
+    "@types/node": "^16.11.15",
+    "fast-xml-parser": "^4.4.0",
+    "jasmine": "^5.1.0",
+    "tmp": "^0.2.3",
+    "typescript": "^5.4.5"
+  },
+  "imports": {
+    "#dist/*": "./dist/*"
   }
 }

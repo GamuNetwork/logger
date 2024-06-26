@@ -1,92 +1,12 @@
-import * as fs from 'fs';
+import { replaceNewLine, getTime, centerString, GetCallerFilePath, splitLongString } from './utils.js';
+import { COLORS, LEVELS, SENSITIVE_LEVELS, Target, TARGET_TYPE, TERMINAL_TARGETS } from './customTypes.js';
 
-import { replaceNewLine, getTime, centerString, GetCallerInfo } from './utils.js';
 
-enum COLORS{
-    RED = "\x1b[91m",
-    DARK_RED = "\x1b[91m\x1b[1m",
-    GREEN = "\x1b[92m",
-    YELLOW = "\x1b[93m",
-    BLUE = "\x1b[94m",
-    RESET = "\x1b[0m",
-    NONE = ""
-}
-
-namespace LEVELS{
-    export enum LEVELS {
-        DEEP_DEBUG = 0,
-        DEBUG = 1,
-        INFO = 2,
-        WARNING = 3,
-        ERROR = 4,
-        CRITICAL = 5
-    }
-
-    export function name(level : LEVELS){
-        switch(level){
-            case LEVELS.DEEP_DEBUG:
-                return "DEEP_DEBUG";
-            case LEVELS.DEBUG:
-                return "DEBUG";
-            case LEVELS.INFO:
-                return "INFO";
-            case LEVELS.WARNING:
-                return "WARNING";
-            case LEVELS.ERROR:
-                return "ERROR";
-            case LEVELS.CRITICAL:
-                return "CRITICAL";
-        }
-        
-    }
-
-    export function toString(level : LEVELS){
-        switch(level){
-            case LEVELS.DEEP_DEBUG:
-            case LEVELS.DEBUG:
-                return "  DEBUG   ";
-            case LEVELS.INFO:
-                return "   INFO   ";
-            case LEVELS.WARNING:
-                return " WARNING  ";
-            case LEVELS.ERROR:
-                return "  ERROR   ";
-            case LEVELS.CRITICAL:
-                return " CRITICAL ";
-        }
-    }
-
-    export function getColor(level : LEVELS){
-        switch(level){
-            case 0:
-            case 1:
-                return COLORS.BLUE;
-            case 2:
-                return COLORS.GREEN;
-            case 3:
-                return COLORS.YELLOW;
-            case 4:
-                return COLORS.RED;
-            case 5:
-                return COLORS.DARK_RED;
-            default:
-                return COLORS.NONE;
-        }
-    }
-}
-
-enum SENSITIVE_LEVELS{
-    HIDE,
-    ENCODE,
-    SHOW
-}
 
 class Logger{
     static _instance = new Logger();
 
-    private _level : LEVELS.LEVELS = LEVELS.LEVELS.INFO;
-    private _target : Function = console.log;
-    private _sensitive_level : SENSITIVE_LEVELS = SENSITIVE_LEVELS.HIDE;
+    private _targets : Target[] = [];
     private _sensitive_data : string[] = [];
     private _module_map : Record<string, string> = {}; // filepath -> module name
 
@@ -96,38 +16,47 @@ class Logger{
         }
         Logger._instance = this;
 
+        Logger.addTarget(TERMINAL_TARGETS.STDOUT, LEVELS.INFO, SENSITIVE_LEVELS.HIDE);
+
         return this;
     }
 
 // ----------------- CONFIGURATION METHODS -----------------
 
-    static setLevel(level: LEVELS.LEVELS){
-        Logger._instance._level = level;
+    static setLevel(targetName: string, level: LEVELS.LEVELS){
+        let target = Target.get(targetName);
+        target.setProperty('level', level);
     }
 
-    static setTarget(target: any){
-        // target can be either a function or a file path; if it's a file path, it will be created if it doesn't exist
-        if(typeof target === 'string'){
-            // create the file if it doesn't exist, clear it if it does
-            let path = target.toString();
-            if(fs.existsSync(path)){
-                fs.unlinkSync(path);
-            }
-            fs.writeFileSync(path, '');
-            Logger._instance._target = (message : string) => {
-                fs.appendFileSync(path, message + '\n');
-            }
+    static setSensitiveMode(targetName: string, level: SENSITIVE_LEVELS.SENSITIVE_LEVELS){
+        let target = Target.get(targetName);
+        target.setProperty('sensitiveMode', level);
+
+        if(level === SENSITIVE_LEVELS.SHOW){
+            Logger.messageInTarget(target, "Sensitive data may be visible in this file, do not share this file with anyone", COLORS.YELLOW);
         }
-        else if(typeof target === 'function'){
-            Logger._instance._target = target;
+    }
+
+    static addTarget(targetSource : string|Function|TERMINAL_TARGETS.TERMINAL_TARGETS, level = LEVELS.INFO, sensitiveMode = SENSITIVE_LEVELS.HIDE){
+        let target : Target;
+        if(typeof targetSource === 'string'){
+            if(Target.exist(targetSource)){
+                throw new Error("Target '" + targetSource + "' already exists");
+            }
+            target = Target.fromFile(targetSource);
+        }
+        else if(typeof targetSource === 'function' || typeof targetSource === 'number'){
+            target = new Target(targetSource);
         }
         else{
-            throw new Error("Invalid target type");
+            throw new Error("Invalid target source");
         }
-    }
+        Logger._instance._targets.push(target);
+        
+        Logger.setLevel(target.name, level);
+        Logger.setSensitiveMode(target.name, sensitiveMode);
 
-    static setSensitiveLevel(level: SENSITIVE_LEVELS){
-        Logger._instance._sensitive_level = level;
+        return target;
     }
 
     static addSensitiveData(data: string){
@@ -138,92 +67,143 @@ class Logger{
         if(moduleName.length > 10){
             throw new Error("Module name '" + moduleName + "' is too long");
         }
-        Logger._instance._module_map[GetCallerInfo()] = moduleName;
+        Logger._instance._module_map[GetCallerFilePath()] = moduleName;
     }
 
 // ------------------- INTERNAL METHODS --------------------
 
-    static #log(level : LEVELS.LEVELS, message : string, filename : string){
-        if(Logger._instance._level <= level){
-        Logger._instance._target(Logger.#format(level, message, filename));
+    private static log(level : LEVELS.LEVELS, message : string, filename : string){
+        for(let target of Logger._instance._targets){
+            if(target.getProperty('level') <= level){
+                let result = "";
+                let moduleName = Logger._instance._module_map[filename];
+                let indent = 33 + (moduleName ? 15 : 0);
+                if(typeof message !== 'string'){
+                    message = JSON.stringify(message, null, 4);
+                }
+                message = splitLongString(message, 100);
+                message = replaceNewLine(message, indent);
+                message = Logger.parseSensitiveData(message, target);
+                if(target.type === TARGET_TYPE.TERMINAL){
+                    result = `[${COLORS.BLUE.toString()}${getTime()}${COLORS.RESET.toString()}] [${LEVELS.getColor(level)}${LEVELS.toString(level)}${COLORS.RESET.toString()}] `;
+                    if(moduleName){
+                        result += `[ ${COLORS.BLUE.toString()}${centerString(moduleName, 15)}${COLORS.RESET.toString()} ] `;
+                    }
+                }
+                else{
+                    //same as terminal but without colors
+                    result = `[${getTime()}] [${LEVELS.toString(level)}] `;
+                    if(moduleName){
+                        result += `[ ${centerString(moduleName, 15)} ] `;
+                    }
+                }
+                result += message + "\n";
+                target.call(result);
+            }
         }
     }
 
-    static colorString(color : COLORS, message : string){
-        if(Logger._instance._target === console.log){
-            return color.toString() + message + COLORS.RESET.toString();
+    private static parseSensitiveData(message : string, target : Target){
+        if(target.getProperty('sensitiveMode') === SENSITIVE_LEVELS.HIDE){
+            for(let data of Logger._instance._sensitive_data){
+                message = message.replace(data, "*".repeat(data.length));
+            }
         }
-        return message; // no color support for file output
+        return message;
     }
 
-    static #format(level : LEVELS.LEVELS, message : string, filename : string){
-        let moduleName = Logger._instance._module_map[filename];
-        let indent = 33 + (moduleName ? 15 : 0);
-        message = replaceNewLine(message, indent);
-        let result = `[${Logger.colorString(COLORS.BLUE, getTime())}] [${Logger.colorString(LEVELS.getColor(level), LEVELS.toString(level))}] `;
-        if(moduleName){
-            result += `[ ${Logger.colorString(COLORS.BLUE, centerString(moduleName, 10))} ] `;
+    private static messageInTarget(target : Target, message : string, color = COLORS.NONE){
+        message = Logger.parseSensitiveData(message, target);
+        if(target.type === TARGET_TYPE.TERMINAL){
+            target.call(color.toString() + message + COLORS.RESET.toString());
         }
-        result += message;
+        else{
+            target.call(message);
+        }
+    }
+
+// ------------------ DEBUGGING METHODS --------------------
+
+    static repr(){
+        let result = {"targets": [], "SensitiveDatas" : []} as Record<string, any>;
+        for(let target of Logger._instance._targets){
+            result["targets"].push(target.repr());
+        }
+        result["SensitiveDatas"] = Logger._instance._sensitive_data;
+        result["moduleMap"] = Logger._instance._module_map;
         return result;
+    }
+
+    static reset(){
+        Logger._instance._targets = [];
+        Logger._instance._sensitive_data = [];
+        Logger._instance._module_map = {};
+        Target.clear();
     }
 
 // ------------------- LOGGING METHODS ---------------------
 
     static message(message : string, color = COLORS.NONE){
-        Logger._instance._target(Logger.colorString(color, message));
+        for(let target of Logger._instance._targets){
+            Logger.messageInTarget(target, message, color);
+        }
     }
 
-    static deepDebug(message : string, filename = GetCallerInfo()){
-        Logger.#log(LEVELS.LEVELS.DEEP_DEBUG, message, filename);
+    static deepDebug(message : string, filename = GetCallerFilePath()){
+        Logger.log(LEVELS.DEEP_DEBUG, message, filename);
     }
 
-    static debug(message : string, filename = GetCallerInfo()){
-        Logger.#log(LEVELS.LEVELS.DEBUG, message, filename);
+    static debug(message : string, filename = GetCallerFilePath()){
+        Logger.log(LEVELS.DEBUG, message, filename);
     }
     
-    static info(message : string, filename = GetCallerInfo()){
-        Logger.#log(LEVELS.LEVELS.INFO, message, filename);
+    static info(message : string, filename = GetCallerFilePath()){
+        Logger.log(LEVELS.INFO, message, filename);
     }
 
-    static warning(message : string, filename = GetCallerInfo()){
-        Logger.#log(LEVELS.LEVELS.WARNING, message, filename);
+    static warning(message : string, filename = GetCallerFilePath()){
+        Logger.log(LEVELS.WARNING, message, filename);
     }
 
-    static error(message : string, filename = GetCallerInfo()){
-        Logger.#log(LEVELS.LEVELS.ERROR, message, filename);
+    static error(message : string, filename = GetCallerFilePath()){
+        Logger.log(LEVELS.ERROR, message, filename);
     }
 
-    static critical(message : string, filename = GetCallerInfo()){
-        Logger.#log(LEVELS.LEVELS.CRITICAL, message, filename);
+    static critical(message : string, filename = GetCallerFilePath()){
+        Logger.log(LEVELS.CRITICAL, message, filename);
     }
 }
 
 
 function deepDebug(message: string){
-    Logger.deepDebug(message, GetCallerInfo());
+    Logger.deepDebug(message, GetCallerFilePath());
 }
 
 function debug(message : string){
-    Logger.debug(message, GetCallerInfo());
+    Logger.debug(message, GetCallerFilePath());
 }
 
 function info(message : string){
-    Logger.info(message, GetCallerInfo());
+    Logger.info(message, GetCallerFilePath());
 }
 
 function warning(message : string){
-    Logger.warning(message, GetCallerInfo());
+    Logger.warning(message, GetCallerFilePath());
 }
 
 function error(message : string){
-    Logger.error(message, GetCallerInfo());
+    Logger.error(message, GetCallerFilePath());
 }
 
 function critical(message : string){
-    Logger.critical(message, GetCallerInfo());
+    Logger.critical(message, GetCallerFilePath());
 }
 
+function message(message : string, color = COLORS.NONE){
+    Logger.message(message, color);
+}
+
+new Logger(); //initialize the logger
 
 export {
     Logger,
@@ -236,5 +216,6 @@ export {
     info,
     warning,
     error,
-    critical
+    critical,
+    message
 }

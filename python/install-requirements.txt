@@ -1,0 +1,9 @@
+build==1.2.1
+build-tool @ https://github.com/GamuNetwork/devtools/releases/download/1.5.8/build_tool-1.5.8-py3-none-any.whl
+exceptiongroup==1.2.1
+iniconfig==2.0.0
+packaging==24.0
+pluggy==1.5.0
+pyproject_hooks==1.1.0
+pytest==8.2.2
+tomli==2.0.1

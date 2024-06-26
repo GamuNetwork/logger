@@ -18,15 +18,14 @@ jobs:
     
     - name: Update pip
       run: python -m pip install --upgrade pip
-    
-    - name: Install dependencies
-      run: pip install -r python/requirements.txt
 
-    - name: Set Package version to tag of release
-      run: sed -i "s/{version}/${{ github.event.release.tag_name }}/g" python/pyproject.toml
+    - name: Install builder tool
+      run : pip install https://github.com/GamuNetwork/devtools/releases/download/1.5.8/build_tool-1.5.8-py3-none-any.whl
 
-    - name: Build
-      run: python -m build python
+
+    - name: build
+      run : cd python && python pack.py -pv ${{ github.event.release.tag_name }} --debug
+
 
     - name: Publish
       uses: AButler/upload-release-assets@v3.0
@@ -37,25 +36,35 @@ jobs:
   build-javascript:
     runs-on: ubuntu-latest
 
+    permissions:
+      contents: read
+      id-token: write
+
     steps:
     - uses: actions/checkout@v4
 
-    - name: Install Node.js
-      uses: actions/setup-node@v4
+    - uses: actions/setup-node@v4
       with:
-        node-version: 16
-        registry-url: https://npm.pkg.github.com/
+        node-version: 20
+        registry-url: https://registry.npmjs.org
 
     - name: Install dependencies
       run: cd javascript && npm ci
+    
+    - name: setup Python 3.12
+      uses: actions/setup-python@v5
+      with:
+        python-version: 3.12 
+    
+    - name: Update pip
+      run: python -m pip install --upgrade pip
 
+    - name: Install builder tool
+      run : pip install https://github.com/GamuNetwork/devtools/releases/download/1.5.8/build_tool-1.5.8-py3-none-any.whl
+      
     - name: build
-      run: cd javascript && npm run build
-
-    - run: sed -i "s/{version}/${{ github.event.release.tag_name }}/g" javascript/package.json
-    - run: sed -i "s/{version}/${{ github.event.release.tag_name }}/g" javascript/package-lock.json
-
-    - name: publish
-      run: cd javascript && npm publish
+      run : cd javascript && python pack.py -pv ${{ github.event.release.tag_name }} --debug --publish
       env:
-        NODE_AUTH_TOKEN: ${{secrets.GITHUB_TOKEN}}
+        NODE_AUTH_TOKEN: ${{secrets.NPM_TOKEN}}
+
+

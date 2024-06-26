@@ -16,3 +16,8 @@ classifiers = [
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
 ]
+
+[tool.pytest.ini_options]
+python_files = "tests/*_test.py"
+pythonpath = "src"
+testpaths = "tests"

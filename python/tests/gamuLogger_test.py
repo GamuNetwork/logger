@@ -89,7 +89,7 @@ class Test_Logger:
         captured = capsys.readouterr()
         result = captured.out
         print(result)
-        assert re.match(r"\[.*\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}.*\] \[.*   INFO   .*\] \[ .*   test   .* \] This is a message", result)
+        assert re.match(r"\[.*\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}.*\] \[.*   INFO   .*\] \[ .*      test     .* \] This is a message", result)
         
     def test_multiline_module(self, capsys):
         Logger.reset()
@@ -99,7 +99,7 @@ class Test_Logger:
         captured = capsys.readouterr()
         result = captured.out
         print(result)
-        assert re.match(r"\[.*\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}.*\] \[.*   INFO   .*\] \[ .*   test   .* \] This is a message\n                                                \| This is a message", result)
+        assert re.match(r"\[.*\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}.*\] \[.*   INFO   .*\] \[ .*      test     .* \] This is a message\n                                                     \| This is a message", result)
         
     def test_too_long_module_name(self):
         Logger.reset()

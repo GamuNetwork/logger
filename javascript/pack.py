@@ -18,8 +18,7 @@ class Builder(BaseBuilder):
         return self.runCommand("npm run build")
         
         
-        
-    def Tests(self):
+    def BuildTests(self):
         self.addDirectory("tests")
         return self.runCommand(f"npm test")
     

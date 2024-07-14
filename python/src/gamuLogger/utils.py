@@ -123,22 +123,29 @@ def strictTypeCheck(func):
         return func(*args, **kwargs)
     return wrapper
 
+def countLinesLength(string : str) -> list[int]:
+    lines = string.split('\n')
+    return [len(line) for line in lines]
+
 def splitLongString(string : str, length : int = 100) -> str:
     """Split a long string into multiple lines, on spaces"""
     result = []
     if len(string) <= length:
         return string
     
-    tokens = string.split(' ')
-    line = ""
-    for token in tokens:
-        if len(token) > length:
-            raise ValueError(f"Word '{token}' is too long (limit is {length} characters)")
-        if len(line) + len(token) > length:
-            result.append(line.strip())
-            line = ""
-        line += token + ' '
-    result.append(line.strip())
+    lines = [line.split(' ') for line in string.split('\n')]
+    
+    for line in lines:
+        current_line = []
+        for word in line:
+            if len(word) > length:
+                raise ValueError("A word is longer than the maximum length")
+            if len(' '.join(current_line)) + len(word) > length:
+                result.append(' '.join(current_line))
+                current_line = [word]
+            else:
+                current_line.append(word)
+        result.append(' '.join(current_line))
     return '\n'.join(result)
 
 class CustomJSONEncoder(JSONEncoder):

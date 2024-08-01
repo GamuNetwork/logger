@@ -375,16 +375,22 @@ class LoggerConfig:
                  sensitiveDatas : list[str] = [],
                  targets : list[Target] = [],
                  moduleMap : dict[str, str] = {},
+                 showProcessName : bool = False,
+                 showThreadName : bool = False
     ):
         self.sensitiveDatas = sensitiveDatas
         self.targets = targets
         self.moduleMap = moduleMap
+        self.showProcessName = showProcessName
+        self.showThreadName = showThreadName
         
         
     def clear(self):
         self.sensitiveDatas = []
         self.targets = []
         self.moduleMap = {}
+        self.showProcessName = False
+        self.showThreadName = False
         
     @staticmethod
     def fromJson(data : str|dict, filePath : str = None) -> 'LoggerConfig':
@@ -407,7 +413,8 @@ class LoggerConfig:
             "moduleMap": {
                 "src/module1.py": "module1",
                 "src/module2.py": "module2"
-            }
+            },
+            "showThreadName" : true,
         }
         """
         if isinstance(data, str):
@@ -424,6 +431,8 @@ class LoggerConfig:
         sensitiveDatas = []
         targets = []
         moduleMap = {}
+        showProcessName = False
+        showThreadName = False
         
         if 'sensitiveDatas' in data:
             sensitiveDatas = data['sensitiveDatas']
@@ -434,8 +443,12 @@ class LoggerConfig:
             for relPath, moduleName in data['moduleMap'].items():
                 absPath = os.path.join(folderPath, relPath)
                 moduleMap[absPath] = moduleName
+        if 'showProcessName' in data:
+            showProcessName = data['showProcessName']
+        if 'showThreadName' in data:
+            showThreadName = data['showThreadName']
         
-        return LoggerConfig(sensitiveDatas, targets, moduleMap)
+        return LoggerConfig(sensitiveDatas, targets, moduleMap, showProcessName, showThreadName)
     
     @staticmethod
     def fromXml(data : str|ElementTree.Element, filePath : str = None) -> 'LoggerConfig':
@@ -455,6 +468,8 @@ class LoggerConfig:
                 <module src='src/module1.py' name='module1'/>
                 <module src='src/module2.py' name='module2'/>
             </modules>
+            <showProcessName>true</showProcessName>
+            <showThreadName>true</showThreadName>
         </config>
         """
         if isinstance(data, str):
@@ -472,25 +487,29 @@ class LoggerConfig:
         sensitiveDatas = []
         targets = []
         
+        showProcessName = False
+        showThreadName = False
+        
         if data.find('sensitiveDatas') is not None:
             sensitiveDatas = [sensitiveData.text for sensitiveData in data.find('sensitiveDatas')]
         if data.find('targets') is not None:
             targets = [Target.fromXml(target) for target in data.find('targets')]
         if data.find('modules') is not None:
-            """```xml	
-            <modules>
-                <module src='src/module1.py' name='module1'/>
-                <module src='src/module2.py' name='module2'/>
-            </modules>
-            ```"""
             for module in data.find('modules'):
                 if not "src" in module.attrib or not "name" in module.attrib:
                     raise ValueError("The module must have a 'src' and a 'name' attribute")
                 relPath = module.attrib['src']
                 abspath = os.path.join(folderPath, relPath)
                 moduleMap[abspath] = module.attrib['name']
+            
+        if data.find('showProcessName') is not None:
+            showProcessName = data.find('showProcessName').text.lower() == 'true'
         
-        return LoggerConfig(sensitiveDatas, targets, moduleMap)
+        if data.find('showThreadName') is not None:
+            showThreadName = data.find('showThreadName').text.lower() == 'true'
+        
+        
+        return LoggerConfig(sensitiveDatas, targets, moduleMap, showProcessName, showThreadName)
     
     @staticmethod
     def fromConfigFile(filePath : str) -> 'LoggerConfig':
@@ -519,6 +538,8 @@ class LoggerConfig:
         masterGroup.add_argument('--sensitiveDatas', '-d', nargs='+', help='The list of sensitive datas to hide in the logs, separated by spaces')
         masterGroup.add_argument('--addTarget', '-t', action="append", nargs='+', help='Add a target to the logger, the arguments are the target configuration (in order: target (stdout, stderr or filename), level (deep-debug, debug, info, warning, error, critical), sensitiveMode (hide, show), sensitiveDatas (list of sensitive datas to hide), name) All arguments are optional exept the target')
         masterGroup.add_argument('--addModule', '-m', action="append", nargs=2, help='Add a module to the logger, the arguments are the path to the file and the name of the module')
+        masterGroup.add_argument('--showProcessName', '-P', action="store_true", help='Show the process name in the logs')
+        masterGroup.add_argument('--showThreadName', '-T', action="store_true", help='Show the thread name in the logs')
                 
         return masterGroup
     
@@ -556,6 +577,12 @@ class LoggerConfig:
         if args.addModule is not None:
             for module in args.addModule:
                 self.moduleMap[module[0]] = module[1]
+                
+        if args.showProcessName is not None:
+            self.showProcessName = args.showProcessName
+        
+        if args.showThreadName is not None:
+            self.showThreadName = args.showThreadName
     
     def __getitem__(self, key: str) -> any:
         match key:
@@ -565,6 +592,10 @@ class LoggerConfig:
                 return self.targets
             case 'moduleMap':
                 return self.moduleMap
+            case 'showProcessName':
+                return self.showProcessName
+            case 'showThreadName':
+                return self.showThreadName
             case _:
                 raise KeyError(f"Parameter {key} not found")
             
@@ -576,11 +607,15 @@ class LoggerConfig:
                 self.targets = value
             case 'moduleMap':
                 self.moduleMap = value
+            case 'showProcessName':
+                self.showProcessName = value
+            case 'showThreadName':
+                self.showThreadName = value
             case _:
                 raise KeyError(f"Parameter {key} not found")
             
     def __str__(self):
-        return f"LoggerConfig(sensitiveDatas={self.sensitiveDatas}, targets={list(map(str, self.targets))}, moduleMap={self.moduleMap})"
+        return f"LoggerConfig(sensitiveDatas={self.sensitiveDatas}, targets={list(map(str, self.targets))}, moduleMap={self.moduleMap}, showProcessName={self.showProcessName}, showThreadName={self.showThreadName})"
             
             
 if __name__ == '__main__':

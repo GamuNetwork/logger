@@ -3,6 +3,8 @@ from datetime import datetime
 from typing import Any, Callable, List
 import argparse
 from json import dumps
+import threading
+import os
 
 from .utils import getCallerInfo, getTime, replaceNewLine, centerString, strictTypeCheck, CustomJSONEncoder, splitLongString
 from .customTypes import COLORS, LEVELS, SENSITIVE_LEVELS, Target, TERMINAL_TARGETS, LoggerConfig
@@ -47,6 +49,18 @@ class Logger:
                 result += f" [ {COLORS.BLUE}{centerString(self.config['moduleMap'][filename], 15)}{COLORS.RESET} ]"
             else:
                 result += f" [ {centerString(self.config['moduleMap'][filename], 15)} ]"
+            
+        if self.config['showThreadName']:
+            if target.type == Target.Type.TERMINAL:
+                result += f" [ Thread: {COLORS.BLUE}{centerString(threading.current_thread().name, 10)}{COLORS.RESET} ]"
+            else:
+                result += f" [ Thread: {centerString(threading.current_thread().name, 10)} ]"                
+            
+        if self.config['showProcessName']:
+            if target.type == Target.Type.TERMINAL:
+                result += f" [ Process: {COLORS.BLUE}{centerString(str(os.getpid()), 4)}{COLORS.RESET} ]"
+            else:
+                result += f" [ Process: {centerString(os.getpid(), 10)} ]"
             
         if type(message) in [int, float, bool]:
             message = str(message)
@@ -156,7 +170,16 @@ class Logger:
             raise ValueError("Module name should be less than 15 characters")
         else:
             Logger().config['moduleMap'][getCallerInfo()] = name
-            
+    
+    @staticmethod
+    @strictTypeCheck
+    def showThreadName(show : bool):
+        Logger().config['showThreadName'] = show
+    
+    @staticmethod
+    @strictTypeCheck
+    def showProcessName(show : bool):
+        Logger().config['showProcessName'] = show
         
     @staticmethod
     @strictTypeCheck

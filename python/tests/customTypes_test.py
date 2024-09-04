@@ -165,8 +165,8 @@ class Test_LoggerConfig:
                     }
                 ],
                 "moduleMap": {
-                    "src/module1.py": "module1",
-                    "src/module2.py": "module2"
+                    "src\\module1.py": "module1",
+                    "src\\module2.py": "module2"
                 }
             }, "config.json")
             
@@ -202,8 +202,8 @@ class Test_LoggerConfig:
                     <target terminal='stdout' name='stdout'/>
                 </targets>
                 <modules>
-                    <module src='src/module1.py' name='module1'/>
-                    <module src='src/module2.py' name='module2'/>
+                    <module src='src\\module1.py' name='module1'/>
+                    <module src='src\\module2.py' name='module2'/>
                 </modules>
             </config>
             """), "config.xml")

@@ -136,7 +136,7 @@ class Test_Logger:
         assert re.match(r"\[.*\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}.*\] \[.*  DEBUG   .*\] Calling test with", result[0])
         assert re.match(r"                                 \| args: \(\)", result[1])
         assert re.match(r"                                 \| kwargs: {}", result[2])
-        assert re.match(r"\[.*\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}.*\] \[.*  DEBUG   .*\] Function test took 0:00:00.\d{6} to execute and returned \"This is a deep debug function\"", result[3])
+        assert re.match(r"\[.*\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}.*\] \[.*  DEBUG   .*\] Function test took 0:00:00 to execute and returned \"This is a deep debug function\"", result[3])
         
     def test_debugFunc(self, capsys):
         Logger.reset()
@@ -229,4 +229,15 @@ class Test_Logger:
         print(result)
         
         assert re.match(r"\[\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\] \[   INFO   \] This is a message", result)
+        
+        
+    def test_configArgParse(self):
+        import argparse
+        Logger.reset()
+        
+        parser = argparse.ArgumentParser()
+        Logger.configArgParse(parser)
+        
+        args = parser.parse_args([])
+        Logger.parseArgs(args)
         

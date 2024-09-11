@@ -1,8 +1,9 @@
-from builderTool import BaseBuilder
+from feanor import BaseBuilder
 
 class Builder(BaseBuilder):
     def Setup(self):
         self.addFile("../LICENSE", "/LICENSE")
+        self.addFile("release.md", "/readme.md")
         self.addAndReplaceByPackageVersion("package.json")
         self.addAndReplaceByPackageVersion("package-lock.json")
         self.addDirectory("config")
@@ -23,5 +24,3 @@ class Builder(BaseBuilder):
     
     def Publish(self):
         self.runCommand(f"npm publish --access public")
-        
-BaseBuilder.execute()

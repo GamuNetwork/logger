@@ -262,7 +262,8 @@ def deepDebugFunc(chrono : bool = False):
             result = func(*args, **kwargs)
             if chrono:
                 end = datetime.now()
-                deepDebug(f"Function {func.__name__} took {end-start} to execute and returned \"{result}\"")
+                tDelta = str(end-start).split(".")[0]
+                deepDebug(f"Function {func.__name__} took {tDelta} to execute and returned \"{result}\"")
             else:
                 deepDebug(f"Function {func.__name__} returned \"{result}\"")
             return result

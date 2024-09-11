@@ -55,7 +55,6 @@ class COLORS(Enum):
     def __repr__(self):
         return self.value
 
-
 class LEVELS(Enum):
     """
     ## list of levels:
@@ -368,7 +367,6 @@ class Target:
     @staticmethod
     def register(target : 'Target'):
         Target.__instances[target.name] = target
-
 
 class LoggerConfig:
     def __init__(self, 

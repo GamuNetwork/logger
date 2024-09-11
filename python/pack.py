@@ -1,5 +1,4 @@
-from builderTool import BaseBuilder, PYTHON
-
+from feanor import BaseBuilder
 
 class Builder(BaseBuilder):
     def Setup(self):
@@ -11,13 +10,12 @@ class Builder(BaseBuilder):
         self.addFile('../LICENSE', 'LICENSE')
         self.addFile('install-requirements.txt')
         
-        self.runCommand(f"{PYTHON} -m pip install -r install-requirements.txt")
+        self.venv().install('build==1.2.1')
+        self.venv().install('pytest==8.2.2')
         
     def Build(self):
-        self.runCommand(f"{PYTHON} -m build {self.tempDir} --outdir {self.distDir}")
+        self.venv().runModule(f"build {self.tempDir} --outdir {self.distDir}")
     
     def Tests(self):
         self.addDirectory('tests')
-        self.runCommand(f"{PYTHON} -m pytest {self.tempDir}/tests")
-
-BaseBuilder.execute()
+        self.venv().runModule(f"pytest {self.tempDir}/tests")

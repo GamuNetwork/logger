@@ -185,8 +185,8 @@ class Test_LoggerConfig:
             assert config.targets[1].properties["sensitiveMode"] == SENSITIVE_LEVELS.HIDE
             
             assert config.moduleMap == {
-                os.path.abspath("src/module1.py"): "module1",
-                os.path.abspath("src/module2.py"): "module2"
+                os.path.abspath("src\\module1.py"): "module1",
+                os.path.abspath("src\\module2.py"): "module2"
             }
         
     def test_fromXml(self):
@@ -223,6 +223,6 @@ class Test_LoggerConfig:
             assert config.targets[1].properties["sensitiveMode"] == SENSITIVE_LEVELS.HIDE
             
             assert config.moduleMap == {
-                os.path.abspath("src/module1.py"): "module1",
-                os.path.abspath("src/module2.py"): "module2"
+                os.path.abspath("src\\module1.py"): "module1",
+                os.path.abspath("src\\module2.py"): "module2"
             }

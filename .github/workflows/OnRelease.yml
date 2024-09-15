@@ -5,6 +5,8 @@ on:
 
 
 jobs:
+
+#region BUILD
   build-python:
     runs-on: ubuntu-latest
 
@@ -26,8 +28,13 @@ jobs:
     - name: build
       run : cd python && python pack.py -pv ${{ github.event.release.tag_name }} --debug
 
+    - name: Store artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: python-package-distributions
+        path: python/dist/*
 
-    - name: Publish
+    - name: Publish release assets
       uses: AButler/upload-release-assets@v3.0
       with:
         files: "python/dist/*"
@@ -67,4 +74,47 @@ jobs:
       env:
         NODE_AUTH_TOKEN: ${{secrets.NPM_TOKEN}}
 
+#endregion
 
+#region PYTHON_PUBLISH
+  publish-test-pypi:
+    name: Publish to Test PyPI
+    needs: build-python
+    runs-on: ubuntu-latest
+    environment:
+      name: testpypi
+      url: https://test.pypi.org/p/gamuLogger
+    permissions:
+      id-token: write
+    
+    steps:
+      - name: Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: python-package-distributions
+          path: dist/
+      - name: Publish to Test PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
+
+  # publish-pypi:
+  #   name: Publish to PyPI
+  #   needs: build-python
+  #   runs-on: ubuntu-latest
+  #   environment:
+  #     name: pypi
+  #     url: https://pypi.org/p/gamuLogger
+  #   permissions:
+  #     id-token: write
+    
+  #   steps:
+  #     - name: Download artifact
+  #       uses: actions/download-artifact@v4
+  #       with:
+  #         name: python-package-distributions
+  #         path: dist/
+  #     - name: Publish to PyPI
+  #       uses: pypa/gh-action-pypi-publish@release/v1
+
+#endregion

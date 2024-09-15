@@ -14,13 +14,13 @@
 
 
 ## <div align="center">🔨 Installation</div>
-The package is available in the assets of the latest release on [github](https://github.com/GamuNetwork/logger/releases/latest).
+The package is available in the assets of the latest release on [pypi](https://pypi.org/project/gamuLogger).
 
-You can manually download the package and install it with pip:
+You can install it with pip(**recommended**):
 ```bash
-pip install path/to/gamu_logger-2.0.0-py3-none-any.whl
+pip install gamuLogger
 ```
-Or install it directly from github (**recommended**):
+Or from github:
 ```bash
 pip install https://github.com/GamuNetwork/logger/releases/download/2.0.0/gamu_logger-2.0.0-py3-none-any.whl
 ```
@@ -104,7 +104,6 @@ Logger.parseArgs(args) # this will apply the configuration from the arguments to
 ## <div align="center">📁 Examples</div>
 you can find examples in the [example](./example) directory.
 - [example 1](./example/example1) - 
-- [example 2](./example/example2) - 
 
 
 

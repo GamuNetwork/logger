@@ -3,6 +3,7 @@ from feanor import BaseBuilder
 class Builder(BaseBuilder):
     def Setup(self):
         self.addDirectory("src")
+        self.addFile("release.md", "/readme.md")
         self.addAndReplaceByPackageVersion('src/gamuLogger/__init__.py')
         
         self.addAndReplaceByPackageVersion('pyproject.toml')

@@ -7,7 +7,6 @@ class Builder(BaseBuilder):
         self.addAndReplaceByPackageVersion('src/gamuLogger/__init__.py')
         
         self.addAndReplaceByPackageVersion('pyproject.toml')
-        self.addFile('readme.md')
         self.addFile('../LICENSE', 'LICENSE')
         
         self.venv().install('build==1.2.1')

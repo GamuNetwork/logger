@@ -68,6 +68,10 @@ jobs:
 
     - name: Install feanor
       run: pip install feanor
+    
+    - name: Install gamuLogger
+    # will be deleted as soon as the package is published to PyPI and gamuLogger is set as a dependency of feanor
+      run: pip install https://github.com/GamuNetwork/logger/releases/download/2.0.3/gamu_logger-2.0.3-py3-none-any.whl#sha256=74bd0953ecd02148e988a43f90bc2e393a295340e19443316650ee14f3e9b82b
       
     - name: build
       run : cd javascript && python pack.py -pv ${{ github.event.release.tag_name }} --debug --publish

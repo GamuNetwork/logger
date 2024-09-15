@@ -9,7 +9,6 @@ class Builder(BaseBuilder):
         self.addAndReplaceByPackageVersion('pyproject.toml')
         self.addFile('readme.md')
         self.addFile('../LICENSE', 'LICENSE')
-        self.addFile('install-requirements.txt')
         
         self.venv().install('build==1.2.1')
         self.venv().install('pytest==8.2.2')

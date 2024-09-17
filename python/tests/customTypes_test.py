@@ -15,6 +15,7 @@ class TempFile:
     def __exit__(self, exc_type, exc_value, traceback):
         os.close(self.fd)
         os.remove(self.filepath)
+        
 
 class Test_LEVELS:
     def test_values(self):
@@ -164,10 +165,6 @@ class Test_LoggerConfig:
                         "terminal": "stdout"
                     }
                 ],
-                "moduleMap": {
-                    "src\\module1.py": "module1",
-                    "src\\module2.py": "module2"
-                }
             }, "config.json")
             
             assert config.sensitiveDatas == ["password", "token"]
@@ -184,10 +181,6 @@ class Test_LoggerConfig:
             assert config.targets[1].properties["level"] == LEVELS.INFO
             assert config.targets[1].properties["sensitiveMode"] == SENSITIVE_LEVELS.HIDE
             
-            assert config.moduleMap == {
-                os.path.abspath("src\\module1.py"): "module1",
-                os.path.abspath("src\\module2.py"): "module2"
-            }
         
     def test_fromXml(self):
         with TempFile() as filepath:
@@ -201,10 +194,6 @@ class Test_LoggerConfig:
                     <target file="{filepath}" level='info' sensitiveMode='show'/>
                     <target terminal='stdout' name='stdout'/>
                 </targets>
-                <modules>
-                    <module src='src\\module1.py' name='module1'/>
-                    <module src='src\\module2.py' name='module2'/>
-                </modules>
             </config>
             """), "config.xml")
             
@@ -222,7 +211,3 @@ class Test_LoggerConfig:
             assert config.targets[1].properties["level"] == LEVELS.INFO
             assert config.targets[1].properties["sensitiveMode"] == SENSITIVE_LEVELS.HIDE
             
-            assert config.moduleMap == {
-                os.path.abspath("src\\module1.py"): "module1",
-                os.path.abspath("src\\module2.py"): "module2"
-            }

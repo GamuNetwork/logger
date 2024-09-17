@@ -4,8 +4,8 @@ from typing import Any, Callable, List
 import argparse
 from json import dumps
 
-from .utils import getCallerInfo, getTime, replaceNewLine, centerString, strictTypeCheck, CustomJSONEncoder, splitLongString
-from .customTypes import COLORS, LEVELS, SENSITIVE_LEVELS, Target, TERMINAL_TARGETS, LoggerConfig
+from .utils import getCallerInfo, getTime, replaceNewLine, centerString, strictTypeCheck, CustomJSONEncoder, splitLongString, colorize
+from .customTypes import COLORS, LEVELS, SENSITIVE_LEVELS, Target, TERMINAL_TARGETS, LoggerConfig, Module
 
 
 class Logger:
@@ -27,12 +27,12 @@ class Logger:
 #---------------------------------------- Internal methods ----------------------------------------
     
     @strictTypeCheck
-    def __print(self, level : LEVELS, message : Any, filename : str):
+    def __print(self, level : LEVELS, message : Any, callerInfo : tuple[str, str]):
         for target in self.config['targets']:
-            self.__printInTarget(level, message, filename, target)
+            self.__printInTarget(level, message, callerInfo, target)
         
     @strictTypeCheck
-    def __printInTarget(self, level : LEVELS, message : Any, filename : str, target : Target):
+    def __printInTarget(self, level : LEVELS, message : Any, callerInfo : tuple[str, str], target : Target):
         if not target["level"] <= level:
             return
         result = ""
@@ -42,11 +42,15 @@ class Logger:
             # if the target is a file, we don't need to color the output
             result += f"[{getTime()}] [{level}]"
         
-        if filename in self.config['moduleMap']:
+        if Module.exist(*callerInfo):
             if target.type == Target.Type.TERMINAL:
-                result += f" [ {COLORS.BLUE}{centerString(self.config['moduleMap'][filename], 15)}{COLORS.RESET} ]"
+                # result += f" [ {COLORS.BLUE}{centerString(self.config['moduleMap'][callerInfo], 15)}{COLORS.RESET} ]" #TODO update this line
+                for module in Module.get(*callerInfo).getCompletePath():
+                    result += f" [ {colorize(COLORS.BLUE, centerString(module, 15))} ]"
             else:
-                result += f" [ {centerString(self.config['moduleMap'][filename], 15)} ]"
+                # result += f" [ {centerString(self.config['moduleMap'][callerInfo], 15)} ]" #TODO update this line
+                for module in Module.get(*callerInfo).getCompletePath():
+                    result += f" [ {centerString(module, 15)} ]"
             
         if type(message) in [int, float, bool]:
             message = str(message)
@@ -55,7 +59,7 @@ class Logger:
         else:
             message = dumps(message, indent=4, cls=CustomJSONEncoder)
         
-        result += " " + replaceNewLine(message, 33 + (20 if filename in self.config['moduleMap'] else 0))
+        result += " " + replaceNewLine(message, 33 + (20 if Module.exist(*callerInfo) else 0))
         result = self.__parseSensitive(result, target)
         target(result+"\n")
             
@@ -85,40 +89,40 @@ class Logger:
 #---------------------------------------- Logging methods -----------------------------------------
             
     @staticmethod
-    def deepDebug(message : Any, filename = None):
-        if filename is None:
-            filename = getCallerInfo()
-        Logger().__print(LEVELS.DEEP_DEBUG, message, filename)
+    def deepDebug(message : Any, callerInfo = None):
+        if callerInfo is None:
+            callerInfo = getCallerInfo()
+        Logger().__print(LEVELS.DEEP_DEBUG, message, callerInfo)
 
     @staticmethod
-    def debug(message : Any, filename = None):
-        if filename is None:
-            filename = getCallerInfo()
-        Logger().__print(LEVELS.DEBUG, message, filename)
+    def debug(message : Any, callerInfo = None):
+        if callerInfo is None:
+            callerInfo = getCallerInfo()
+        Logger().__print(LEVELS.DEBUG, message, callerInfo)
     
     @staticmethod
-    def info(message : Any, filename = None):
-        if filename is None:
-            filename = getCallerInfo()
-        Logger().__print(LEVELS.INFO, message, filename)
+    def info(message : Any, callerInfo = None):
+        if callerInfo is None:
+            callerInfo = getCallerInfo()
+        Logger().__print(LEVELS.INFO, message, callerInfo)
     
     @staticmethod
-    def warning(message : Any, filename = None):
-        if filename is None:
-            filename = getCallerInfo()
-        Logger().__print(LEVELS.WARNING, message, filename)
+    def warning(message : Any, callerInfo = None):
+        if callerInfo is None:
+            callerInfo = getCallerInfo()
+        Logger().__print(LEVELS.WARNING, message, callerInfo)
         
     @staticmethod
-    def error(message : Any, filename = None):
-        if filename is None:
-            filename = getCallerInfo()
-        Logger().__print(LEVELS.ERROR, message, filename)
+    def error(message : Any, callerInfo = None):
+        if callerInfo is None:
+            callerInfo = getCallerInfo()
+        Logger().__print(LEVELS.ERROR, message, callerInfo)
         
     @staticmethod
-    def critical(message : Any, filename = None):
-        if filename is None:
-            filename = getCallerInfo()
-        Logger().__print(LEVELS.CRITICAL, message, filename)
+    def critical(message : Any, callerInfo = None):
+        if callerInfo is None:
+            callerInfo = getCallerInfo()
+        Logger().__print(LEVELS.CRITICAL, message, callerInfo)
         
     @staticmethod
     @strictTypeCheck
@@ -150,12 +154,20 @@ class Logger:
         
     @staticmethod
     def setModule(name : str):
+        # if name == "":
+        #     del Logger().config['moduleMap'][getCallerInfo()]
+        # elif len(name) > 15:
+        #     raise ValueError("Module name should be less than 15 characters")
+        # else:
+        #     Logger().config['moduleMap'][getCallerInfo()] = name
+        
+        callerInfo = getCallerInfo()
         if name == "":
-            del Logger().config['moduleMap'][getCallerInfo()]
+            Module.delete(*callerInfo)
         elif len(name) > 15:
             raise ValueError("Module name should be less than 15 characters")
         else:
-            Logger().config['moduleMap'][getCallerInfo()] = name
+            Module.new(name, *callerInfo)
             
         
     @staticmethod

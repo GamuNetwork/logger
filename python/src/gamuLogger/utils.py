@@ -4,32 +4,28 @@ from datetime import datetime
 from typing import Any
 from json import JSONEncoder
 
-
-def getCallerInfo():
-    """
-    Returns the absolute filename of the caller of the parent function
-    
-    > ⚠️ From the next version, this fuction will return a tuple (filepath, function_name) instead of just the filepath
-    """
-    return getCallerFilePath(inspect.stack())
+from .customTypes import COLORS
 
 
 def getCallerFilePath(stack = inspect.stack()) -> str:
     """
     Returns the absolute filepath of the caller of the parent function
     """
-    return os.path.abspath(stack[2][1])
+    # return os.path.abspath(stack[2][1])
+    if len(stack) < 3:
+        return os.path.abspath(stack[-1].filename)
+    return os.path.abspath(stack[2].filename)
 
-def getCallerFunctionName(stack = inspect.stack()):
+def getCallerFunctionName(stack = inspect.stack()) -> str:
     """
     Returns the name of the function that called this one, including the class name if the function is a method
     """
-    if len(stack) < 2:
-        return "main"
-    caller = stack[1]
+    if len(stack) < 3:
+        return "<module>"
+    caller = stack[2]
     caller_name = caller.function
     if caller_name == "<module>":
-        return "main"
+        return "<module>"
     
     parents = getAllParents(caller.filename, caller.lineno)[::-1]
     if len(parents) > 0:
@@ -41,8 +37,9 @@ def getCallerFunctionName(stack = inspect.stack()):
         return caller_name
     
 
-# def getCallerInfo():
-#     return getCallerFilePath(inspect.stack()), getCallerFunctionName(inspect.stack())
+def getCallerInfo():
+    stack = inspect.stack()
+    return getCallerFilePath(stack), getCallerFunctionName(stack)
 
 def getTime():
     return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -186,30 +183,11 @@ def getAllParents(filepath, lineno):
         if len(line) - len(line.lstrip()) < indentation:
             indentation = len(line) - len(line.lstrip())
             if "class" in line:
-                parents.append(line.strip()[:-1].split(' ')[1])
+                parents.append(line.strip()[:-1].split(' ')[1]) # Remove the ':'
+            elif "def" in line:
+                parents.append(line.strip()[:-1].split(' ')[1].split('(')[0])
     
     return parents
 
-
-if __name__ == '__main__':
-    print(getCallerInfo())
-    
-    class foo:
-        print(getCallerInfo())
-        def __init__(self):
-            print(getCallerInfo())
-        
-        def toto(self):
-            print(getCallerInfo())
-            
-        class bar:                
-            def titi(self):
-                print(getCallerInfo())
-            
-    def salut():
-        print(getCallerInfo())
-        
-    f = foo()
-    f.toto()
-    f.bar().titi()
-    salut()
+def colorize(color : COLORS, string : str):
+    return f"{color}{string}{COLORS.RESET}"

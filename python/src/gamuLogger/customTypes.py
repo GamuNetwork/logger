@@ -13,18 +13,8 @@ class Module:
         self.name = name
         self.file = file
         self.function = function
-        self.children = {}
         
         Module.__instances[(self.file, self.function)] = self
-    
-    def __getitem__(self, key : str) -> 'Module':
-        return self.children[key]
-    
-    def __setitem__(self, key : str, value : 'Module'):
-        self.children[key] = value
-        
-    def __delitem__(self, key : str):
-        del self.children[key]
     
     def getCompleteName(self) -> str:
         if self.parent is None:
@@ -75,13 +65,6 @@ class Module:
         else:
             raise ValueError(f"No module found for name {name}")
         
-    
-    @staticmethod
-    def list() -> list[str]:
-        """
-        Return the list of all modules
-        """
-        return list(Module.__instances.keys())
     
     @staticmethod
     def clear():

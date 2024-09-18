@@ -1,4 +1,4 @@
-  {
+{
   "name": "@gamunetwork/logger",
   "version": "{version}",
   "description": "This is a logger module, allowing to create beautiful log very easily",
@@ -37,5 +37,8 @@
   },
   "imports": {
     "#dist/*": "./dist/*"
+  },
+  "devDependencies": {
+    "@types/tmp": "^0.2.6"
   }
 }

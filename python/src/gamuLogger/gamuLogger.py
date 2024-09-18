@@ -44,11 +44,9 @@ class Logger:
         
         if Module.exist(*callerInfo):
             if target.type == Target.Type.TERMINAL:
-                # result += f" [ {COLORS.BLUE}{centerString(self.config['moduleMap'][callerInfo], 15)}{COLORS.RESET} ]" #TODO update this line
                 for module in Module.get(*callerInfo).getCompletePath():
                     result += f" [ {colorize(COLORS.BLUE, centerString(module, 15))} ]"
             else:
-                # result += f" [ {centerString(self.config['moduleMap'][callerInfo], 15)} ]" #TODO update this line
                 for module in Module.get(*callerInfo).getCompletePath():
                     result += f" [ {centerString(module, 15)} ]"
             

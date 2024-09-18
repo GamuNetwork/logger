@@ -1,14 +1,12 @@
-import { replaceNewLine, getTime, centerString, GetCallerFilePath, splitLongString } from './utils.js';
-import { COLORS, LEVELS, SENSITIVE_LEVELS, Target, TARGET_TYPE, TERMINAL_TARGETS } from './customTypes.js';
+import { replaceNewLine, getTime, centerString, getCallerInfo, splitLongString } from './utils.js';
+import { COLORS, LEVELS, SENSITIVE_LEVELS, Target, TARGET_TYPE, TERMINAL_TARGETS, LoggerConfig, Module, CallerInfo } from './customTypes.js';
 
 
 
 class Logger{
     static _instance = new Logger();
 
-    private _targets : Target[] = [];
-    private _sensitive_data : string[] = [];
-    private _module_map : Record<string, string> = {}; // filepath -> module name
+    private config : LoggerConfig = new LoggerConfig();
 
     constructor(){
         if(Logger._instance){
@@ -51,7 +49,7 @@ class Logger{
         else{
             throw new Error("Invalid target source");
         }
-        Logger._instance._targets.push(target);
+        Logger._instance.config.targets.push(target);
         
         Logger.setLevel(target.name, level);
         Logger.setSensitiveMode(target.name, sensitiveMode);
@@ -60,41 +58,46 @@ class Logger{
     }
 
     static addSensitiveData(data: string){
-        Logger._instance._sensitive_data.push(data);
+        Logger._instance.config.sensitiveDatas.push(data);
     }
 
     static setModule(moduleName: string){
         if(moduleName.length > 10){
             throw new Error("Module name '" + moduleName + "' is too long");
         }
-        Logger._instance._module_map[GetCallerFilePath()] = moduleName;
+        // Logger._instance._module_map[GetCallerFilePath()] = moduleName;
+        Module.new(moduleName, getCallerInfo());
     }
 
 // ------------------- INTERNAL METHODS --------------------
 
-    private static log(level : LEVELS.LEVELS, message : string, filename : string){
-        for(let target of Logger._instance._targets){
+    private static log(level : LEVELS.LEVELS, message : string, callerInfo : CallerInfo){
+        for(let target of Logger._instance.config.targets){
             if(target.getProperty('level') <= level){
                 let result = "";
-                let moduleName = Logger._instance._module_map[filename];
-                let indent = 33 + (moduleName ? 15 : 0);
-                if(typeof message !== 'string'){
-                    message = JSON.stringify(message, null, 4);
-                }
                 message = splitLongString(message, 100);
-                message = replaceNewLine(message, indent);
-                message = Logger.parseSensitiveData(message, target);
                 if(target.type === TARGET_TYPE.TERMINAL){
                     result = `[${COLORS.BLUE.toString()}${getTime()}${COLORS.RESET.toString()}] [${LEVELS.getColor(level)}${LEVELS.toString(level)}${COLORS.RESET.toString()}] `;
-                    if(moduleName){
-                        result += `[ ${COLORS.BLUE.toString()}${centerString(moduleName, 15)}${COLORS.RESET.toString()} ] `;
-                    }
                 }
                 else{
-                    //same as terminal but without colors
                     result = `[${getTime()}] [${LEVELS.toString(level)}] `;
-                    if(moduleName){
-                        result += `[ ${centerString(moduleName, 15)} ] `;
+                }
+
+                if(Module.exist(callerInfo)){
+                    let modules = Module.get(callerInfo).getCompletePath();
+                    const indent = 33 + 15 * modules.length;
+                    message = replaceNewLine(message, indent);
+                    message = Logger.parseSensitiveData(message, target);
+                    
+                    if(target.type === TARGET_TYPE.TERMINAL){
+                        for(let i = 0; i < modules.length; i++){
+                            result += `[ ${COLORS.BLUE.toString()}${centerString(modules[i], 15)}${COLORS.RESET.toString()} ] `;
+                        }
+                    }
+                    else{
+                        for(let i = 0; i < modules.length; i++){
+                            result += `[ ${centerString(modules[i], 15)} ] `;
+                        }
                     }
                 }
                 result += message + "\n";
@@ -105,7 +108,7 @@ class Logger{
 
     private static parseSensitiveData(message : string, target : Target){
         if(target.getProperty('sensitiveMode') === SENSITIVE_LEVELS.HIDE){
-            for(let data of Logger._instance._sensitive_data){
+            for(let data of Logger._instance.config.sensitiveDatas){
                 message = message.replace(data, "*".repeat(data.length));
             }
         }
@@ -126,77 +129,76 @@ class Logger{
 
     static repr(){
         let result = {"targets": [], "SensitiveDatas" : []} as Record<string, any>;
-        for(let target of Logger._instance._targets){
+        for(let target of Logger._instance.config.targets){
             result["targets"].push(target.repr());
         }
-        result["SensitiveDatas"] = Logger._instance._sensitive_data;
-        result["moduleMap"] = Logger._instance._module_map;
+        result["SensitiveDatas"] = Logger._instance.config.sensitiveDatas;
+        result["moduleMap"] = Module.getNameList();
         return result;
     }
 
     static reset(){
-        Logger._instance._targets = [];
-        Logger._instance._sensitive_data = [];
-        Logger._instance._module_map = {};
+        Logger._instance.config.clear();
+        Module.clear();
         Target.clear();
     }
 
 // ------------------- LOGGING METHODS ---------------------
 
     static message(message : string, color = COLORS.NONE){
-        for(let target of Logger._instance._targets){
+        for(let target of Logger._instance.config.targets){
             Logger.messageInTarget(target, message, color);
         }
     }
 
-    static deepDebug(message : string, filename = GetCallerFilePath()){
-        Logger.log(LEVELS.DEEP_DEBUG, message, filename);
+    static deepDebug(message : string, callerInfo = getCallerInfo()){
+        Logger.log(LEVELS.DEEP_DEBUG, message, callerInfo);
     }
 
-    static debug(message : string, filename = GetCallerFilePath()){
-        Logger.log(LEVELS.DEBUG, message, filename);
+    static debug(message : string, callerInfo = getCallerInfo()){
+        Logger.log(LEVELS.DEBUG, message, callerInfo);
     }
     
-    static info(message : string, filename = GetCallerFilePath()){
-        Logger.log(LEVELS.INFO, message, filename);
+    static info(message : string, callerInfo = getCallerInfo()){
+        Logger.log(LEVELS.INFO, message, callerInfo);
     }
 
-    static warning(message : string, filename = GetCallerFilePath()){
-        Logger.log(LEVELS.WARNING, message, filename);
+    static warning(message : string, callerInfo = getCallerInfo()){
+        Logger.log(LEVELS.WARNING, message, callerInfo);
     }
 
-    static error(message : string, filename = GetCallerFilePath()){
-        Logger.log(LEVELS.ERROR, message, filename);
+    static error(message : string, callerInfo = getCallerInfo()){
+        Logger.log(LEVELS.ERROR, message, callerInfo);
     }
 
-    static critical(message : string, filename = GetCallerFilePath()){
-        Logger.log(LEVELS.CRITICAL, message, filename);
+    static critical(message : string, callerInfo = getCallerInfo()){
+        Logger.log(LEVELS.CRITICAL, message, callerInfo);
     }
 }
 
 
 function deepDebug(message: string){
-    Logger.deepDebug(message, GetCallerFilePath());
+    Logger.deepDebug(message, getCallerInfo());
 }
 
 function debug(message : string){
-    Logger.debug(message, GetCallerFilePath());
+    Logger.debug(message, getCallerInfo());
 }
 
 function info(message : string){
-    Logger.info(message, GetCallerFilePath());
+    Logger.info(message, getCallerInfo());
 }
 
 function warning(message : string){
-    Logger.warning(message, GetCallerFilePath());
+    Logger.warning(message, getCallerInfo());
 }
 
 function error(message : string){
-    Logger.error(message, GetCallerFilePath());
+    Logger.error(message, getCallerInfo());
 }
 
 function critical(message : string){
-    Logger.critical(message, GetCallerFilePath());
+    Logger.critical(message, getCallerInfo());
 }
 
 function message(message : string, color = COLORS.NONE){

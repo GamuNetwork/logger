@@ -1,4 +1,4 @@
-import { centerString, getTime, replaceNewLine, GetCallerFilePath, splitLongString } from '#dist/utils.js';
+import { centerString, getTime, replaceNewLine, getCallerInfo, splitLongString } from '#dist/utils.js';
 import process from 'node:process';
 
 const OS = process.platform;
@@ -29,18 +29,19 @@ describe('getTime', () => {
     });
 });
 
-describe('GetCallerFilePath', () => {
-    it('should return caller filepath', () => {
-        const caller = GetCallerFilePath();
-        expect(caller).toMatch(/.+jasmine\.js/);
+describe('getCallerInfo', () => {
+    it('should return caller informations', () => {
+        const [func, file] = getCallerInfo();
+        expect(file).toMatch(/.+jasmine\.js/);
+        expect(func).toBe('attempt');
     });
     it('should return an absolute path', () => {
-        const caller = GetCallerFilePath();
+        const file = getCallerInfo()[1];
         if(OS === 'win32'){
-            expect(caller).toMatch(/^[A-Z]:\\.*jasmine\.js/);
+            expect(file).toMatch(/^[A-Z]:\\.*jasmine\.js/);
         }
         else{
-            expect(caller).toMatch(/^.+jasmine\.js/);
+            expect(file).toMatch(/^.+jasmine\.js/);
         }
     });
 });

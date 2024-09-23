@@ -96,7 +96,7 @@ export class Module{
         }
 
         if (name.includes(".")){
-            let [parentName, moduleName] = name.split('.').reverse();
+            let [parentName, moduleName] = name.split(".");
             if (Module.existByName(parentName)){
                 let parent = Module.getByName(parentName);
                 return new Module(moduleName, parent, file, func);

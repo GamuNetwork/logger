@@ -15,6 +15,7 @@ class Builder(BaseBuilder):
         
     def Build(self):
         self.runCommand("npm run build")
+        self.runCommand(f'npm pack --pack-destination "{self.distDir}"')
         
         
     def BuildTests(self):

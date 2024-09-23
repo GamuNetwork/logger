@@ -185,6 +185,12 @@ class Logger:
     
     @staticmethod
     @strictTypeCheck
+    def removeTarget(targetName : str):
+        Logger().config.removeTarget(targetName)
+        Target.unregister(targetName)
+    
+    @staticmethod
+    @strictTypeCheck
     def addSensitiveData(data : Any):
         Logger().config['sensitiveDatas'].append(data)
         

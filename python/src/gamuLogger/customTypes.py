@@ -427,6 +427,9 @@ class Target:
         self.__name = name
         del Target.__instances[old_name]
         Target.__instances[name] = self
+        
+    def delete(self):
+        Target.unregister(self)
 
     
     @staticmethod
@@ -453,6 +456,18 @@ class Target:
     @staticmethod
     def register(target : 'Target'):
         Target.__instances[target.name] = target
+        
+    @staticmethod
+    def unregister(target : 'Target'|str):
+        if isinstance(target, str):
+            name = target
+        else:
+            name = target.name
+        if Target.exist(name):
+            del Target.__instances[name]
+        else:
+            raise ValueError(f"Target {name} does not exist")
+        
 
 class LoggerConfig:
     def __init__(self, sensitiveDatas : list[str] = [], targets : list[Target] = []):
@@ -549,6 +564,14 @@ class LoggerConfig:
         else:
             raise ValueError("The file must be a json or xml file")
             
+    
+    def deleteTarget(self, name : str):
+        for target in self.targets:
+            if target.name == name:
+                self.targets.remove(target)
+                return
+        raise ValueError(f"Target {name} not found")
+    
     
     @staticmethod
     def configArgParse(parser : argparse.ArgumentParser) -> argparse._ArgumentGroup:

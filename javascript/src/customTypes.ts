@@ -485,6 +485,10 @@ export class Target{
         return this._type;
     }
 
+    delete(){
+        Target.unregister(this);
+    }
+
     static get(targetName: string){
         if(Target.instances[targetName]){
             return Target.instances[targetName];
@@ -502,6 +506,16 @@ export class Target{
 
     static clear(){
         Target.instances = {};
+    }
+
+    static unregister(target: Target|string){
+        let targetName = typeof target === 'string' ? target : target.name;
+        if(Target.exist(targetName)){
+            delete Target.instances[targetName];
+        }
+        else{
+            throw new Error("Target '" + targetName + "' not found");
+        }
     }
 }
 
@@ -590,5 +604,15 @@ export class LoggerConfig{
 
     public toString(){
         return "LoggerConfig(sensitiveDatas=[" + this.sensitiveDatas.join(", ") + "], targets=[" + this.targets.map(target => target.toString()).join(", ") + "])";
+    }
+
+    deleteTarget(name : string){
+        for (let i = 0; i < this.targets.length; i++){
+            if (this.targets[i].name == name){
+                this.targets.splice(i, 1);
+                return;
+            }
+        }
+        throw new Error("Target '" + name + "' not found");
     }
 }

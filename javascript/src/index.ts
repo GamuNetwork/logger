@@ -69,6 +69,11 @@ class Logger{
         Module.new(moduleName, getCallerInfo());
     }
 
+    static removeTarget(targetName: string){
+        Logger._instance.config.deleteTarget(targetName);
+        Target.unregister(targetName);
+    }
+
 // ------------------- INTERNAL METHODS --------------------
 
     private static log(level : LEVELS.LEVELS, message : string, callerInfo : CallerInfo){

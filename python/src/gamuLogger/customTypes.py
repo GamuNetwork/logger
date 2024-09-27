@@ -458,7 +458,7 @@ class Target:
         Target.__instances[target.name] = target
         
     @staticmethod
-    def unregister(target : 'Target'|str):
+    def unregister(target):
         if isinstance(target, str):
             name = target
         else:

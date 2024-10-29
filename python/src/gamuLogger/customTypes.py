@@ -5,6 +5,93 @@ import os
 import argparse
 from json import loads
 from xml.etree import ElementTree
+import threading
+
+class Module:
+    __instances = {} #type: dict[tuple[str, str], Module]
+    def __init__(self, name : str, parent : 'Module' = None, file : str = None, function : str = None):
+        self.parent = parent
+        self.name = name
+        self.file = file
+        self.function = function
+        
+        Module.__instances[(self.file, self.function)] = self
+    
+    def getCompleteName(self) -> str:
+        if self.parent is None:
+            return self.name
+        return self.parent.getCompleteName() + '.' + self.name
+    
+    def getCompletePath(self) -> list[str]:
+        if self.parent is None:
+            return [self.name]
+        return self.parent.getCompletePath() + [self.name]
+    
+    @staticmethod
+    def get(filename : str, function : str) -> 'Module':
+        if Module.exist(filename, function):
+            return Module.__instances[(filename, function)]
+        else:
+            raise ValueError(f"No module found for file {filename} and function {function}")
+        
+    @staticmethod
+    def exist(filename : str, function : str) -> bool:
+        return (filename, function) in Module.__instances
+    
+    @staticmethod
+    def delete(filename : str, function : str):
+        if Module.exist(filename, function):
+            del Module.__instances[(filename, function)]
+        else:
+            raise ValueError(f"No module found for file {filename} and function {function}")
+    
+    @staticmethod
+    def getByName(name : str) -> 'Module':
+        for module in Module.__instances.values():
+            if module.getCompleteName() == name:
+                return module
+        raise ValueError(f"No module found for name {name}")
+    
+    @staticmethod
+    def existByName(name : str) -> bool:
+        for module in Module.__instances.values():
+            if module.getCompleteName() == name:
+                return True
+        return False
+    
+    @staticmethod
+    def deleteByName(name : str):
+        if Module.existByName(name):
+            del Module.__instances[name]
+        else:
+            raise ValueError(f"No module found for name {name}")
+        
+    
+    @staticmethod
+    def clear():
+        Module.__instances = {}
+        
+    @staticmethod
+    def new(name : str, file : str = None, function : str = None) -> 'Module':
+        if Module.existByName(name):
+            existing = Module.getByName(name)
+            if file == existing.file and function == existing.function:
+                return existing
+            else:
+                raise ValueError(f"Module {name} already exists with file {existing.file} and function {existing.function}")
+        
+        if '.' in name:
+            parentName, moduleName = name.rsplit('.', 1)
+            if Module.existByName(parentName):
+                #get the parent module
+                parent = Module.getByName(parentName)
+                return Module(moduleName, parent, file, function)
+            else:
+                raise ValueError(f"No module found for name {parentName}")
+        return Module(name, None, file, function)
+    
+        
+        
 
 class COLORS(Enum):
     """
@@ -20,6 +107,8 @@ class COLORS(Enum):
     GREEN = '\033[92m'
     YELLOW = '\033[93m'
     BLUE = '\033[94m'
+    MAGENTA = '\033[96m'
+    CYAN = '\033[96m'
     RESET = '\033[0m'
     NONE = ''
     
@@ -218,6 +307,7 @@ class Target:
 
         self.target = targetFunc
         self.properties = {} #type: dict[str, any]
+        self.__lock = threading.Lock()
 
     @staticmethod
     def fromFile(file : str) -> 'Target':
@@ -307,7 +397,8 @@ class Target:
             
 
     def __call__(self, string : str):
-        self.target(string)
+        with self.__lock: # prevent multiple threads to write at the same time
+            self.target(string)
         
     def __str__(self) -> str:
         return self.__name
@@ -341,6 +432,9 @@ class Target:
         self.__name = name
         del Target.__instances[old_name]
         Target.__instances[name] = self
+        
+    def delete(self):
+        Target.unregister(self)
 
     
     @staticmethod
@@ -367,22 +461,32 @@ class Target:
     @staticmethod
     def register(target : 'Target'):
         Target.__instances[target.name] = target
+        
+    @staticmethod
+    def unregister(target):
+        if isinstance(target, str):
+            name = target
+        else:
+            name = target.name
+        if Target.exist(name):
+            del Target.__instances[name]
+        else:
+            raise ValueError(f"Target {name} does not exist")
+        
 
 class LoggerConfig:
-    def __init__(self, 
-                 sensitiveDatas : list[str] = [],
-                 targets : list[Target] = [],
-                 moduleMap : dict[str, str] = {},
-    ):
+    def __init__(self, sensitiveDatas : list[str] = [], targets : list[Target] = []):
         self.sensitiveDatas = sensitiveDatas
         self.targets = targets
-        self.moduleMap = moduleMap
+        self.showThreadsName = False
+        self.showProcessName = False
         
         
     def clear(self):
         self.sensitiveDatas = []
         self.targets = []
-        self.moduleMap = {}
+        self.showThreadsName = False
+        self.showProcessName = False
         
     @staticmethod
     def fromJson(data : str|dict, filePath : str = None) -> 'LoggerConfig':
@@ -401,11 +505,7 @@ class LoggerConfig:
                     "name": "stdout",
                     "terminal": "stdout"
                 }
-            ],
-            "moduleMap": {
-                "src/module1.py": "module1",
-                "src/module2.py": "module2"
-            }
+            ]
         }
         """
         if isinstance(data, str):
@@ -421,19 +521,13 @@ class LoggerConfig:
         
         sensitiveDatas = []
         targets = []
-        moduleMap = {}
         
         if 'sensitiveDatas' in data:
             sensitiveDatas = data['sensitiveDatas']
         if 'targets' in data:
             targets = [Target.fromJson(target) for target in data['targets']]
-        if 'moduleMap' in data:
-            moduleMap = {}
-            for relPath, moduleName in data['moduleMap'].items():
-                absPath = os.path.join(folderPath, relPath)
-                moduleMap[absPath] = moduleName
         
-        return LoggerConfig(sensitiveDatas, targets, moduleMap)
+        return LoggerConfig(sensitiveDatas, targets)
     
     @staticmethod
     def fromXml(data : str|ElementTree.Element, filePath : str = None) -> 'LoggerConfig':
@@ -449,10 +543,6 @@ class LoggerConfig:
                 <target file='log.txt' level='info' sensitiveMode='hide'/>
                 <target terminal='stdout' name='stdout'/>
             </targets>
-            <modules>
-                <module src='src/module1.py' name='module1'/>
-                <module src='src/module2.py' name='module2'/>
-            </modules>
         </config>
         """
         if isinstance(data, str):
@@ -463,9 +553,6 @@ class LoggerConfig:
             raise ValueError("The filePath must be provided when the data is a ElementTree.Element")
         
         filePath = os.path.abspath(filePath)
-        folderPath = os.path.dirname(filePath)
-        
-        moduleMap = {}
         
         sensitiveDatas = []
         targets = []
@@ -474,21 +561,8 @@ class LoggerConfig:
             sensitiveDatas = [sensitiveData.text for sensitiveData in data.find('sensitiveDatas')]
         if data.find('targets') is not None:
             targets = [Target.fromXml(target) for target in data.find('targets')]
-        if data.find('modules') is not None:
-            """```xml	
-            <modules>
-                <module src='src/module1.py' name='module1'/>
-                <module src='src/module2.py' name='module2'/>
-            </modules>
-            ```"""
-            for module in data.find('modules'):
-                if not "src" in module.attrib or not "name" in module.attrib:
-                    raise ValueError("The module must have a 'src' and a 'name' attribute")
-                relPath = module.attrib['src']
-                abspath = os.path.join(folderPath, relPath)
-                moduleMap[abspath] = module.attrib['name']
         
-        return LoggerConfig(sensitiveDatas, targets, moduleMap)
+        return LoggerConfig(sensitiveDatas, targets)
     
     @staticmethod
     def fromConfigFile(filePath : str) -> 'LoggerConfig':
@@ -499,6 +573,14 @@ class LoggerConfig:
         else:
             raise ValueError("The file must be a json or xml file")
             
+    
+    def deleteTarget(self, name : str):
+        for target in self.targets:
+            if target.name == name:
+                self.targets.remove(target)
+                return
+        raise ValueError(f"Target {name} not found")
+    
     
     @staticmethod
     def configArgParse(parser : argparse.ArgumentParser) -> argparse._ArgumentGroup:
@@ -516,7 +598,6 @@ class LoggerConfig:
         
         masterGroup.add_argument('--sensitiveDatas', '-d', nargs='+', help='The list of sensitive datas to hide in the logs, separated by spaces')
         masterGroup.add_argument('--addTarget', '-t', action="append", nargs='+', help='Add a target to the logger, the arguments are the target configuration (in order: target (stdout, stderr or filename), level (deep-debug, debug, info, warning, error, critical), sensitiveMode (hide, show), sensitiveDatas (list of sensitive datas to hide), name) All arguments are optional exept the target')
-        masterGroup.add_argument('--addModule', '-m', action="append", nargs=2, help='Add a module to the logger, the arguments are the path to the file and the name of the module')
                 
         return masterGroup
     
@@ -550,10 +631,6 @@ class LoggerConfig:
                     self.targets[[t.name for t in self.targets].index(target.name)] = target
                 else:
                     self.targets.append(target)
-
-        if args.addModule is not None:
-            for module in args.addModule:
-                self.moduleMap[module[0]] = module[1]
     
     def __getitem__(self, key: str) -> any:
         match key:
@@ -561,8 +638,10 @@ class LoggerConfig:
                 return self.sensitiveDatas
             case 'targets':
                 return self.targets
-            case 'moduleMap':
-                return self.moduleMap
+            case 'showThreadsName':
+                return self.showThreadsName
+            case 'showProcessName':
+                return self.showProcessName
             case _:
                 raise KeyError(f"Parameter {key} not found")
             
@@ -572,13 +651,15 @@ class LoggerConfig:
                 self.sensitiveDatas = value
             case 'targets':
                 self.targets = value
-            case 'moduleMap':
-                self.moduleMap = value
+            case 'showThreadsName':
+                self.showThreadsName = value
+            case 'showProcessName':
+                self.showProcessName = value
             case _:
                 raise KeyError(f"Parameter {key} not found")
             
     def __str__(self):
-        return f"LoggerConfig(sensitiveDatas={self.sensitiveDatas}, targets={list(map(str, self.targets))}, moduleMap={self.moduleMap})"
+        return f"LoggerConfig(sensitiveDatas={self.sensitiveDatas}, targets={list(map(str, self.targets))}, showThreadsName={self.showThreadsName}, showProcessName={self.showProcessName})"
             
             
 if __name__ == '__main__':

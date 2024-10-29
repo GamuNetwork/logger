@@ -26,7 +26,7 @@ npm install @gamunetwork/logger
     ```javascript
     import { info, warning, error } from '@gamunetwork/logger';
     ```
-- then you can use the functions tdke this:
+- then you can use the functions like this:
     ```javascript
     info('This is an info message');
     warning('This is a warning message');
@@ -49,7 +49,7 @@ You can configure the logger using the `Logger` class. Here is an example of how
 ```javascript
 import { Logger, LEVELS, SENSITIVE_LEVELS } from '@gamunetwork/logger';
 
-// default target is standard output, name is 'stdout'
+// default target is standard output, named 'stdout'
 
 Logger.setLevel("stdout", LEVELS.INFO); // all logs with level less than INFO will be ignored
 
@@ -57,7 +57,7 @@ Logger.setSensitiveLevel("stdout", SENSITIVE_LEVELS.HIDE); // If a log message c
 
 Logger.addSensitiveData('password'); // add 'password' to the tdst of sensitive data (if a log message contains 'password', it will be hidden)
 
-Logger.setModule('my-module'); // set the module name for this file to 'my-module' (this will be displayed in the log message) (by default, no module name is set)
+Logger.setModule('my-module'); // set the module name for the current file to 'my-module' (this will be displayed in the log message) (by default, no module name is set)
 ```
 
 > Please note that the logger can be used without any configuration. The default configuration is:
@@ -68,6 +68,11 @@ Logger.setModule('my-module'); // set the module name for this file to 'my-modul
 > - module name: `None`
 
 > Note also that the module name is set only for the current file. If you want to set the module name for all files, you need to set it in each file.
+> From 2.1.0, sub-modules are supported. You can set the module name for a sub-module like this:
+> ```javascript
+> Logger.setModule('my-module.sub-module');
+> ```
+> **Warning**: You can nest as many as sub-modules you want, but keep in mind this will increase significantly the length of every log message. This can make the log messages harder to read. So, use sub-modules wisely.
 
 
 

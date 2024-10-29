@@ -4,4 +4,5 @@
 .vscode
 *.save
 
-env/
+*env/
+dist/

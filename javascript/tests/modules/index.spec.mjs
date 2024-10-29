@@ -13,12 +13,12 @@ describe('testing default configuration', () => {
         expect(Logger.repr()["SensitiveDatas"]).toEqual([]);
     });
     it('module map should be empty', () => {
-        expect(Logger.repr()["moduleMap"]).toEqual({});
+        expect(Logger.repr()["moduleMap"]).toEqual([]);
     });
 });
 
 describe('testing logging functions', () => { //deepDebug, debug, info, warning, error, critical
-    it('should log DEEP_DEBUG message', () => {
+    it('should log DEEP_DEBUG message', function testDeepDebug() {
         Logger.reset();
         const randomName = tmp.tmpNameSync();
         Logger.addTarget(randomName);
@@ -28,7 +28,7 @@ describe('testing logging functions', () => { //deepDebug, debug, info, warning,
         expect(log).toMatch(/\[[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}\] \[  DEBUG   \] Hello World!/);
         fs.unlinkSync(randomName);
     });
-    it('should log DEBUG message', () => {
+    it('should log DEBUG message', function testDebug() {
         Logger.reset();
         const randomName = tmp.tmpNameSync();
         Logger.addTarget(randomName);
@@ -38,7 +38,7 @@ describe('testing logging functions', () => { //deepDebug, debug, info, warning,
         expect(log).toMatch(/\[[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}\] \[  DEBUG   \] Hello World!/);
         fs.unlinkSync(randomName);
     });
-    it('should log INFO message', () => {
+    it('should log INFO message', function testInfo() {
         Logger.reset();
         const randomName = tmp.tmpNameSync();
         Logger.addTarget(randomName);
@@ -47,7 +47,7 @@ describe('testing logging functions', () => { //deepDebug, debug, info, warning,
         expect(log).toMatch(/\[[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}\] \[   INFO   \] Hello World!/);   
         fs.unlinkSync(randomName);
     });
-    it('should log WARNING message', () => {
+    it('should log WARNING message', function testWarning() {
         Logger.reset();
         const randomName = tmp.tmpNameSync();
         Logger.addTarget(randomName);
@@ -56,7 +56,7 @@ describe('testing logging functions', () => { //deepDebug, debug, info, warning,
         expect(log).toMatch(/\[[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}\] \[ WARNING  \] Hello World!/); 
         fs.unlinkSync(randomName);  
     });
-    it('should log ERROR message', () => {
+    it('should log ERROR message', function testError() {
         Logger.reset();
         const randomName = tmp.tmpNameSync();
         Logger.addTarget(randomName);
@@ -65,7 +65,7 @@ describe('testing logging functions', () => { //deepDebug, debug, info, warning,
         expect(log).toMatch(/\[[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}\] \[  ERROR   \] Hello World!/);  
         fs.unlinkSync(randomName); 
     });
-    it('should log CRITICAL message', () => {
+    it('should log CRITICAL message', function testCritical() {
         Logger.reset();
         const randomName = tmp.tmpNameSync();
         Logger.addTarget(randomName);

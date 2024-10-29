@@ -3,6 +3,117 @@ import * as fs from 'fs';
 import { XMLParser, XMLValidator} from "fast-xml-parser";
 XMLValidator;
 
+export type CallerInfo = [string, string];
+
+export class Module{
+    private static instances = {} as Record<string, Module>;
+
+    private name : string;
+    private parent : Module|null;
+    private file : string;
+    private func : string;
+
+    constructor(name : string, parent : Module|null = null, file : string, func : string){
+        this.name = name;
+        this.parent = parent;
+        this.file = file;
+        this.func = func;
+
+        Module.instances[file+": "+func] = this;
+    }
+
+    getCompleteName() : string{
+        return this.parent ? this.parent.getCompleteName() + "." + this.name : this.name;
+    }
+
+    getCompletePath() : string[]{
+        return this.parent ? this.parent.getCompletePath().concat([this.name]) : [this.name];
+    }
+
+    static get([func, file] : CallerInfo) : Module{
+        if (Module.exist([func, file])){
+            return Module.instances[file+": "+func];
+        }
+        else{
+            throw new Error("No module found for file '"+file+"' and function '"+func+"'");
+        }
+    }
+
+    static exist([func, file] : CallerInfo) : boolean{
+        return Module.instances[file+": "+func] != null;
+    }
+
+    static delete([func, file] : CallerInfo){
+        if (Module.exist([func, file])){
+            delete Module.instances[file+": "+func];
+        }
+        else{
+            throw new Error("No module found for file '"+file+"' and function '"+func+"'");
+        }
+    }
+
+    static getByName(name : string) : Module{
+        for (let key in Module.instances){
+            if (Module.instances[key].getCompleteName() == name){
+                return Module.instances[key];
+            }
+        }
+        throw new Error("No module found for name '"+name+"'");
+    }
+
+    static existByName(name : string) : boolean{
+        for (let key in Module.instances){
+            if (Module.instances[key].getCompleteName() == name){
+                return true;
+            }
+        }
+        return false;
+    }
+
+    static deleteByName(name : string){
+        for (let key in Module.instances){
+            if (Module.instances[key].getCompleteName() == name){
+                delete Module.instances[key];
+                return;
+            }
+        }
+        throw new Error("No module found for name '"+name+"'");
+    }
+
+    static clear(){
+        Module.instances = {};
+    }
+
+    static new(name : string, [func, file] : CallerInfo) : Module{
+        if (Module.existByName(name)){
+            let existing = Module.getByName(name);
+            if (existing.file == file && existing.func == func){
+                return existing;
+            }
+            else{
+                throw new Error("Module '"+name+"' already exists with file '"+existing.file+"' and function '"+existing.func+"'");
+            }
+        }
+
+        if (name.includes(".")){
+            let [parentName, moduleName] = name.split(".");
+            if (Module.existByName(parentName)){
+                let parent = Module.getByName(parentName);
+                return new Module(moduleName, parent, file, func);
+            }
+            else{
+                throw new Error("Parent module '"+parentName+"' not found for module '"+name+"'");
+            }
+        }
+
+        return new Module(name, null, file, func);
+    }
+
+    static getNameList() : string[]{
+        return Object.values(Module.instances).map(module => module.getCompleteName());
+    }
+}
+
 export namespace COLORS{
     export enum COLORS{
         RED = "\x1b[91m",
@@ -374,6 +485,10 @@ export class Target{
         return this._type;
     }
 
+    delete(){
+        Target.unregister(this);
+    }
+
     static get(targetName: string){
         if(Target.instances[targetName]){
             return Target.instances[targetName];
@@ -392,23 +507,30 @@ export class Target{
     static clear(){
         Target.instances = {};
     }
+
+    static unregister(target: Target|string){
+        let targetName = typeof target === 'string' ? target : target.name;
+        if(Target.exist(targetName)){
+            delete Target.instances[targetName];
+        }
+        else{
+            throw new Error("Target '" + targetName + "' not found");
+        }
+    }
 }
 
 export class LoggerConfig{
     public sensitiveDatas : string[] = [];
     public targets : Target[] = [];
-    public moduleMap : Record<string, string> = {};
 
-    constructor(sensitiveDatas : string[] = [], targets : Target[] = [], moduleMap : Record<string, string> = {}){
+    constructor(sensitiveDatas : string[] = [], targets : Target[] = []){
         this.sensitiveDatas = sensitiveDatas;
         this.targets = targets;
-        this.moduleMap = moduleMap;
     }
 
     public clear(){
         this.sensitiveDatas = [];
         this.targets = [];
-        this.moduleMap = {};
     }
 
     /*
@@ -426,11 +548,7 @@ export class LoggerConfig{
                 "name": "stdout",
                 "terminal": "stdout"
             }
-        ],
-        "moduleMap": {
-            "src/module1.py": "module1",
-            "src/module2.py": "module2"
-        }
+        ]
     }
     */
     public static fromJson(data: string|Record<string, any>){
@@ -438,9 +556,8 @@ export class LoggerConfig{
         
         let sensitiveDatas = obj.sensitiveDatas || [];
         let targets = obj.targets ? obj.targets.map((target : any) => Target.fromJson(target)) : [];
-        let moduleMap = obj.moduleMap || {};
 
-        return new LoggerConfig(sensitiveDatas, targets, moduleMap);
+        return new LoggerConfig(sensitiveDatas, targets);
     }
 
     /*
@@ -457,10 +574,6 @@ export class LoggerConfig{
             <target file='log.txt' level='info' sensitiveMode='hide'/>
             <target terminal='stdout' name='stdout'/>
         </targets>
-        <modules>
-            <module src='src/module1.py' name='module1'/>
-            <module src='src/module2.py' name='module2'/>
-        </modules>
     </config>
     ```
     */
@@ -470,12 +583,8 @@ export class LoggerConfig{
         
         let sensitiveDatas = obj.config.µ_sensitiveDatas ? obj.config.µ_sensitiveDatas.map((data : any) => data.µ_data) : [];
         let targets = obj.config.µ_targets ? obj.config.µ_targets.map((target : any) => Target.fromXml(target)) : [];
-        let moduleMap = obj.config.µ_modules ? obj.config.µ_modules.reduce((acc : Record<string, string>, module : any) => {
-            acc[module.µ_src] = module.µ_name;
-            return acc;
-        }, {}) : {};
 
-        return new LoggerConfig(sensitiveDatas, targets, moduleMap);
+        return new LoggerConfig(sensitiveDatas, targets);
     }
 
     public static fromConfigFile(path: string){
@@ -494,6 +603,16 @@ export class LoggerConfig{
     }
 
     public toString(){
-        return "LoggerConfig(sensitiveDatas=[" + this.sensitiveDatas.join(", ") + "], targets=[" + this.targets.map(target => target.toString()).join(", ") + "], moduleMap=" + JSON.stringify(this.moduleMap) + ")";
+        return "LoggerConfig(sensitiveDatas=[" + this.sensitiveDatas.join(", ") + "], targets=[" + this.targets.map(target => target.toString()).join(", ") + "])";
+    }
+
+    deleteTarget(name : string){
+        for (let i = 0; i < this.targets.length; i++){
+            if (this.targets[i].name == name){
+                this.targets.splice(i, 1);
+                return;
+            }
+        }
+        throw new Error("Target '" + name + "' not found");
     }
 }

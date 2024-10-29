@@ -1,5 +1,6 @@
 import os
 import inspect
+import sys
 from datetime import datetime
 from typing import Any
 from json import JSONEncoder
@@ -191,3 +192,13 @@ def getAllParents(filepath, lineno):
 
 def colorize(color : COLORS, string : str):
     return f"{color}{string}{COLORS.RESET}"
+
+
+def getExecutableFormatted():
+    executable = sys.executable
+    executable = executable.split(os.sep)
+    executable = executable[-1]
+    if 'python' in executable:
+        return f"{executable} {sys.argv[0]}"
+    else:
+        return executable

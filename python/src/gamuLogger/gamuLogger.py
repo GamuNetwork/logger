@@ -1,10 +1,10 @@
-from sys import stdout, stderr
 from datetime import datetime
-from typing import Any, Callable, List
+from typing import Any, Callable
 import argparse
 from json import dumps
+import threading
 
-from .utils import getCallerInfo, getTime, replaceNewLine, centerString, strictTypeCheck, CustomJSONEncoder, splitLongString, colorize
+from .utils import getCallerInfo, getTime, replaceNewLine, centerString, strictTypeCheck, CustomJSONEncoder, splitLongString, colorize, getExecutableFormatted
 from .customTypes import COLORS, LEVELS, SENSITIVE_LEVELS, Target, TERMINAL_TARGETS, LoggerConfig, Module
 
 
@@ -22,7 +22,7 @@ class Logger:
                 cls.__instance.config["targets"] = [Target(TERMINAL_TARGETS.STDOUT)]
                 Target.get("stdout")["level"] = LEVELS.INFO
                 Target.get("stdout")["sensitiveMode"] = SENSITIVE_LEVELS.HIDE
-        return cls.__instance    
+        return cls.__instance
     
 #---------------------------------------- Internal methods ----------------------------------------
     
@@ -36,11 +36,35 @@ class Logger:
         if not target["level"] <= level:
             return
         result = ""
+        
+        # add the current time
         if target.type == Target.Type.TERMINAL:
-            result += f"[{COLORS.BLUE}{getTime()}{COLORS.RESET}] [{level.color()}{level}{COLORS.RESET}]"
+            result += f"[{COLORS.BLUE}{getTime()}{COLORS.RESET}]"
         else:
             # if the target is a file, we don't need to color the output
-            result += f"[{getTime()}] [{level}]"
+            result += f"[{getTime()}]"
+        
+        # add the process name if needed
+        if self.config['showProcessName']:
+            if target.type == Target.Type.TERMINAL:
+                result += f" [{COLORS.CYAN}{centerString(getExecutableFormatted(), 20)}{COLORS.RESET}]"
+            else:
+                result += f" [{centerString(getExecutableFormatted(), 20)}]"
+    
+    
+        # add the thread name if needed
+        if self.config['showThreadsName']:
+            name = centerString(threading.current_thread().name, 30)
+            if target.type == Target.Type.TERMINAL:
+                result += f" [ {COLORS.CYAN}{name}{COLORS.RESET} ]"
+            else:
+                result += f" [ {name} ]"
+        
+        # add the level of the message
+        if target.type == Target.Type.TERMINAL:
+            result += f" [{level.color()}{level}{COLORS.RESET}]"
+        else:
+            result += f" [{level}]"
         
         if Module.exist(*callerInfo):
             if target.type == Target.Type.TERMINAL:
@@ -152,20 +176,24 @@ class Logger:
         
     @staticmethod
     def setModule(name : str):
-        # if name == "":
-        #     del Logger().config['moduleMap'][getCallerInfo()]
-        # elif len(name) > 15:
-        #     raise ValueError("Module name should be less than 15 characters")
-        # else:
-        #     Logger().config['moduleMap'][getCallerInfo()] = name
-        
         callerInfo = getCallerInfo()
-        if name == "":
+        if not name:
             Module.delete(*callerInfo)
         elif len(name) > 15:
             raise ValueError("Module name should be less than 15 characters")
         else:
             Module.new(name, *callerInfo)
+            
+        
+    @staticmethod
+    @strictTypeCheck
+    def showThreadsName(value : bool = True):
+        Logger().config['showThreadsName'] = value
+        
+    @staticmethod
+    @strictTypeCheck
+    def showProcessName(value : bool = True):
+        Logger().config['showProcessName'] = value
             
         
     @staticmethod

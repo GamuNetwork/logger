@@ -5,6 +5,7 @@ import os
 import argparse
 from json import loads
 from xml.etree import ElementTree
+import threading
 
 class Module:
     __instances = {} #type: dict[tuple[str, str], Module]
@@ -106,6 +107,8 @@ class COLORS(Enum):
     GREEN = '\033[92m'
     YELLOW = '\033[93m'
     BLUE = '\033[94m'
+    MAGENTA = '\033[96m'
+    CYAN = '\033[96m'
     RESET = '\033[0m'
     NONE = ''
     
@@ -304,6 +307,7 @@ class Target:
 
         self.target = targetFunc
         self.properties = {} #type: dict[str, any]
+        self.__lock = threading.Lock()
 
     @staticmethod
     def fromFile(file : str) -> 'Target':
@@ -393,7 +397,8 @@ class Target:
             
 
     def __call__(self, string : str):
-        self.target(string)
+        with self.__lock: # prevent multiple threads to write at the same time
+            self.target(string)
         
     def __str__(self) -> str:
         return self.__name
@@ -473,11 +478,15 @@ class LoggerConfig:
     def __init__(self, sensitiveDatas : list[str] = [], targets : list[Target] = []):
         self.sensitiveDatas = sensitiveDatas
         self.targets = targets
+        self.showThreadsName = False
+        self.showProcessName = False
         
         
     def clear(self):
         self.sensitiveDatas = []
         self.targets = []
+        self.showThreadsName = False
+        self.showProcessName = False
         
     @staticmethod
     def fromJson(data : str|dict, filePath : str = None) -> 'LoggerConfig':
@@ -629,6 +638,10 @@ class LoggerConfig:
                 return self.sensitiveDatas
             case 'targets':
                 return self.targets
+            case 'showThreadsName':
+                return self.showThreadsName
+            case 'showProcessName':
+                return self.showProcessName
             case _:
                 raise KeyError(f"Parameter {key} not found")
             
@@ -638,11 +651,15 @@ class LoggerConfig:
                 self.sensitiveDatas = value
             case 'targets':
                 self.targets = value
+            case 'showThreadsName':
+                self.showThreadsName = value
+            case 'showProcessName':
+                self.showProcessName = value
             case _:
                 raise KeyError(f"Parameter {key} not found")
             
     def __str__(self):
-        return f"LoggerConfig(sensitiveDatas={self.sensitiveDatas}, targets={list(map(str, self.targets))})"
+        return f"LoggerConfig(sensitiveDatas={self.sensitiveDatas}, targets={list(map(str, self.targets))}, showThreadsName={self.showThreadsName}, showProcessName={self.showProcessName})"
             
             
 if __name__ == '__main__':

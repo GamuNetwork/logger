@@ -27,15 +27,14 @@ def getCallerFunctionName(stack = inspect.stack()) -> str:
     caller_name = caller.function
     if caller_name == "<module>":
         return "<module>"
-    
+
     parents = getAllParents(caller.filename, caller.lineno)[::-1]
-    if len(parents) > 0:
-        if caller_name == parents[-1]:
-            return '.'.join(parents)
-        else:
-            return '.'.join(parents) + '.' + caller_name
-    else:
+    if len(parents) <= 0:
         return caller_name
+    if caller_name == parents[-1]:
+        return '.'.join(parents)
+    else:
+        return '.'.join(parents) + '.' + caller_name
     
 
 def getCallerInfo():
@@ -106,19 +105,20 @@ def strictTypeCheck(func):
     def wrapper(*args, **kwargs):
         # Get the function arguments
         func_args = getFunctionArguments(func)
-        
+
         # Check the arguments
         for i, arg in enumerate(args):
             types = func_args[list(func_args.keys())[i]]
-            if type(arg) not in types and not Any in types:
+            if type(arg) not in types and Any not in types:
                 raise TypeError(f"Argument {i} of function {func.__name__} must be of type ("+", ".join(map(type2string, types)) + ")")
-            
+
         for key, value in kwargs.items():
             types = func_args[key]
-            if type(value) not in types and not Any in types:
+            if type(value) not in types and Any not in types:
                 raise TypeError(f"Argument {key} of function {func.__name__} must be of type ("+", ".join(map(type2string, types)) + ")")
-        
+
         return func(*args, **kwargs)
+
     return wrapper
 
 def countLinesLength(string : str) -> list[int]:
@@ -194,11 +194,6 @@ def colorize(color : COLORS, string : str):
     return f"{color}{string}{COLORS.RESET}"
 
 
-def getExecutableFormatted():
-    executable = sys.executable
-    executable = executable.split(os.sep)
-    executable = executable[-1]
-    if 'python' in executable:
-        return f"{executable} {sys.argv[0]}"
-    else:
-        return executable
+def getExecutableFormatted() -> str:
+    executable = sys.executable.split(os.sep)[-1]
+    return f"{executable} {sys.argv[0]}" if 'python' in executable else executable

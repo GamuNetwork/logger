@@ -8,14 +8,15 @@ from .utils import getCallerInfo, getTime, replaceNewLine, centerString, strictT
 from .customTypes import COLORS, LEVELS, SENSITIVE_LEVELS, Target, TERMINAL_TARGETS, LoggerConfig, Module
 
 
+class UnexpectedError(Exception): ...
+
 class Logger:
 
-    __instance = None # type: Logger
+    __instance = None # type: Logger|None
     
     def __new__(cls):
         if cls.__instance is None:
-            cls.__instance = super(Logger, cls).__new__(cls)
-            cls.__instance.config = LoggerConfig()
+            cls.__instance = super(Logger, cls).__new__(cls) # this will call the __init__ method
             
             #configuring default target
             if len(cls.__instance.config["targets"]) == 0:
@@ -23,6 +24,9 @@ class Logger:
                 Target.get("stdout")["level"] = LEVELS.INFO
                 Target.get("stdout")["sensitiveMode"] = SENSITIVE_LEVELS.HIDE
         return cls.__instance
+    
+    def __init__(self):
+        self.config = LoggerConfig()
     
 #---------------------------------------- Internal methods ----------------------------------------
     
@@ -38,52 +42,75 @@ class Logger:
         result = ""
         
         # add the current time
-        if target.type == Target.Type.TERMINAL:
-            result += f"[{COLORS.BLUE}{getTime()}{COLORS.RESET}]"
-        else:
-            # if the target is a file, we don't need to color the output
-            result += f"[{getTime()}]"
+        result += self.__LogElementTime(target)
         
         # add the process name if needed
-        if self.config['showProcessName']:
-            if target.type == Target.Type.TERMINAL:
-                result += f" [{COLORS.CYAN}{centerString(getExecutableFormatted(), 20)}{COLORS.RESET}]"
-            else:
-                result += f" [{centerString(getExecutableFormatted(), 20)}]"
-    
+        result += self.__LogElementProcessName(target)
     
         # add the thread name if needed
+        result += self.__LogElementThreadName(target)
+        
+        # add the level of the message
+        result += self.__LogElementLevel(level, target)
+        
+        # add the module name if needed
+        result += self.__LogElementModule(callerInfo, target)
+        
+        # add the message
+        result += self.__LogElementMessage(message, callerInfo)
+        
+        result = self.__parseSensitive(result, target)
+        target(result+"\n")
+    
+    def __LogElementTime(self, target):
+        if target.type == Target.Type.TERMINAL:
+            return f"[{COLORS.BLUE}{getTime()}{COLORS.RESET}]"
+        else:
+            # if the target is a file, we don't need to color the output
+            return f"[{getTime()}]"
+        
+    def __LogElementProcessName(self, target):
+        if self.config['showProcessName']:
+            if target.type == Target.Type.TERMINAL:
+                return f" [{COLORS.CYAN}{centerString(getExecutableFormatted(), 20)}{COLORS.RESET}]"
+            else:
+                return f" [{centerString(getExecutableFormatted(), 20)}]" 
+        return ""
+    
+    def __LogElementThreadName(self, target):
         if self.config['showThreadsName']:
             name = centerString(threading.current_thread().name, 30)
             if target.type == Target.Type.TERMINAL:
-                result += f" [ {COLORS.CYAN}{name}{COLORS.RESET} ]"
+                return f" [ {COLORS.CYAN}{name}{COLORS.RESET} ]"
             else:
-                result += f" [ {name} ]"
-        
-        # add the level of the message
+                return f" [ {name} ]"
+        return ""
+    
+    def __LogElementLevel(self, level, target):
         if target.type == Target.Type.TERMINAL:
-            result += f" [{level.color()}{level}{COLORS.RESET}]"
+            return f" [{level.color()}{level}{COLORS.RESET}]"
         else:
-            result += f" [{level}]"
+            return f" [{level}]"
         
+    def __LogElementModule(self, callerInfo, target):
+        result = ""
         if Module.exist(*callerInfo):
-            if target.type == Target.Type.TERMINAL:
-                for module in Module.get(*callerInfo).getCompletePath():
+            for module in Module.get(*callerInfo).getCompletePath():
+                if target.type == Target.Type.TERMINAL:
                     result += f" [ {colorize(COLORS.BLUE, centerString(module, 15))} ]"
-            else:
-                for module in Module.get(*callerInfo).getCompletePath():
+                else:
                     result += f" [ {centerString(module, 15)} ]"
-            
+        return result
+    
+    def __LogElementMessage(self, message, callerInfo):
         if type(message) in [int, float, bool]:
             message = str(message)
         elif type(message) == str:
             message = splitLongString(message, 150)
         else:
             message = dumps(message, indent=4, cls=CustomJSONEncoder)
-        
-        result += " " + replaceNewLine(message, 33 + (20 if Module.exist(*callerInfo) else 0))
-        result = self.__parseSensitive(result, target)
-        target(result+"\n")
+
+        return f" {replaceNewLine(message, 33 + (20 if Module.exist(*callerInfo) else 0))}"
             
     @strictTypeCheck
     def __printMessageInTarget(self, message : str, color : COLORS, target : Target):
@@ -107,6 +134,8 @@ class Logger:
                 return message          
             case SENSITIVE_LEVELS.SHOW:
                 return message
+            case _:
+                raise ValueError(f"Unknown sensitive mode: {target['sensitiveMode']}")
             
 #---------------------------------------- Logging methods -----------------------------------------
             
@@ -199,10 +228,10 @@ class Logger:
     @staticmethod
     @strictTypeCheck
     def addTarget(targetFunc : Callable[[str], None] | str | Target | TERMINAL_TARGETS, level : LEVELS = LEVELS.INFO, sensitiveMode : SENSITIVE_LEVELS = SENSITIVE_LEVELS.HIDE) -> str:
-        target = None #type: Target
-        if type(targetFunc) == str:
+        target = None #type: Target|None
+        if isinstance(targetFunc, str):
             target = Target.fromFile(targetFunc)
-        elif type(targetFunc) == Target:
+        elif isinstance(targetFunc, Target):
             target = targetFunc
         else:
             target = Target(targetFunc)
@@ -214,7 +243,7 @@ class Logger:
     @staticmethod
     @strictTypeCheck
     def removeTarget(targetName : str):
-        Logger().config.removeTarget(targetName)
+        Logger().config.deleteTarget(targetName)
         Target.unregister(targetName)
     
     @staticmethod
@@ -233,6 +262,9 @@ class Logger:
         Target.clear()
         Logger().config.clear()
         
+        if not Logger.__instance:
+            raise UnexpectedError("Logger instance does not exist")
+        
         #configuring default target
         Logger.__instance.config["targets"] = [Target(TERMINAL_TARGETS.STDOUT)]
         Target.get("stdout")["level"] = LEVELS.INFO
@@ -246,6 +278,8 @@ class Logger:
     @staticmethod
     @strictTypeCheck
     def parseArgs(args : argparse.Namespace) -> None:
+        if not Logger.__instance:
+            raise UnexpectedError("Logger instance does not exist")
         Logger.__instance.config.parseArgs(args)
         
             
@@ -344,7 +378,7 @@ def debugFunc(chrono : bool = False):
             try:
                 result = func(*args, **kwargs)
             except Exception as e:
-                error(f"An error occured in function {func.__name__}: {e.__class__.__name__} - {e}")
+                error(f"An error occurred in function {func.__name__}: {e.__class__.__name__} - {e}")
                 raise e
             if chrono:
                 end = datetime.now()

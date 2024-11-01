@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Callable
+from typing import Callable, Any, Union
 import sys
 import os
 import argparse
@@ -8,8 +8,8 @@ from xml.etree import ElementTree
 import threading
 
 class Module:
-    __instances = {} #type: dict[tuple[str, str], Module]
-    def __init__(self, name : str, parent : 'Module' = None, file : str = None, function : str = None):
+    __instances = {} #type: dict[tuple[str|None, str|None], Module]
+    def __init__(self, name : str, parent : 'Module|None' = None, file : str|None = None, function : str|None = None):
         self.parent = parent
         self.name = name
         self.file = file
@@ -20,7 +20,7 @@ class Module:
     def getCompleteName(self) -> str:
         if self.parent is None:
             return self.name
-        return self.parent.getCompleteName() + '.' + self.name
+        return f'{self.parent.getCompleteName()}.{self.name}'
     
     def getCompletePath(self) -> list[str]:
         if self.parent is None:
@@ -54,17 +54,17 @@ class Module:
     
     @staticmethod
     def existByName(name : str) -> bool:
-        for module in Module.__instances.values():
-            if module.getCompleteName() == name:
-                return True
-        return False
+        return any(
+            module.getCompleteName() == name
+            for module in Module.__instances.values()
+        )
     
     @staticmethod
     def deleteByName(name : str):
-        if Module.existByName(name):
-            del Module.__instances[name]
-        else:
+        if not Module.existByName(name):
             raise ValueError(f"No module found for name {name}")
+        module = Module.getByName(name)
+        del Module.__instances[(module.file, module.function)]
         
     
     @staticmethod
@@ -72,26 +72,23 @@ class Module:
         Module.__instances = {}
         
     @staticmethod
-    def new(name : str, file : str = None, function : str = None) -> 'Module':
+    def new(name : str, file : str|None = None, function : str|None = None) -> 'Module':
         if Module.existByName(name):
             existing = Module.getByName(name)
             if file == existing.file and function == existing.function:
                 return existing
             else:
                 raise ValueError(f"Module {name} already exists with file {existing.file} and function {existing.function}")
-        
+
         if '.' in name:
             parentName, moduleName = name.rsplit('.', 1)
-            if Module.existByName(parentName):
-                #get the parent module
-                parent = Module.getByName(parentName)
-                return Module(moduleName, parent, file, function)
-            else:
+            if not Module.existByName(parentName):
                 raise ValueError(f"No module found for name {parentName}")
+            #get the parent module
+            parent = Module.getByName(parentName)
+            return Module(moduleName, parent, file, function)
         return Module(name, None, file, function)
-    
-        
-        
+
 
 class COLORS(Enum):
     """
@@ -273,7 +270,7 @@ class Target:
                 case Target.Type.TERMINAL:
                     return 'terminal'
     
-    def __new__(cls, target : Callable[[str], None] | TERMINAL_TARGETS, name : str = None):
+    def __new__(cls, target : Callable[[str], None] | TERMINAL_TARGETS, name : str|None = None):
         if name is None:
             if isinstance(target, TERMINAL_TARGETS):
                 name = name if name is not None else str(target)
@@ -287,26 +284,26 @@ class Target:
         cls.__instances[name] = instance
         return instance
     
-    def __init__(self, target : Callable[[str], None] | TERMINAL_TARGETS, name : str = None):
+    def __init__(self, target : Callable[[str], None] | TERMINAL_TARGETS, name : str|None = None):
         
         if isinstance(target, str):
             raise ValueError("The target must be a function or a TERMINAL_TARGETS; use Target.fromFile(file) to create a file target")
         
-        targetFunc = target
         if isinstance(target, TERMINAL_TARGETS):
             match target:
                 case TERMINAL_TARGETS.STDOUT:
-                    targetFunc = sys.stdout.write
+                    self.target = sys.stdout.write
                 case TERMINAL_TARGETS.STDERR:
-                    targetFunc = sys.stderr.write
+                    self.target = sys.stderr.write
             self.__type = Target.Type.TERMINAL
             self.__name = name if name is not None else str(target)
         else:
             self.__type = Target.Type.FILE
             self.__name = name if name is not None else target.__name__
+            self.target = target
+            
 
-        self.target = targetFunc
-        self.properties = {} #type: dict[str, any]
+        self.properties = {} #type: dict[str, Any]
         self.__lock = threading.Lock()
 
     @staticmethod
@@ -319,7 +316,7 @@ class Target:
         return Target(writeToFile, file)
 
     @staticmethod
-    def fromJson(data: str|dict) -> 'Target':
+    def fromJson(fpathOrData: str|dict) -> 'Target':
         """
         examples of json data:
         File:
@@ -338,11 +335,13 @@ class Target:
         }
         ```
         """
-        if isinstance(data, str):
-            with open(data, 'r') as f:
-                data = loads(f.read()) #type: dict
+        if isinstance(fpathOrData, str):
+            with open(fpathOrData, 'r') as f:
+                data = loads(f.read())
+        else:
+            data = fpathOrData
                 
-        result = None #type: Target
+        result = None #type: Target|None
                 
         if 'file' in data:
             result = Target.fromFile(data['file'])
@@ -360,7 +359,7 @@ class Target:
         return result
 
     @staticmethod
-    def fromXml(data: str|ElementTree.Element) -> 'Target':
+    def fromXml(fpathOrData: str|ElementTree.Element) -> 'Target':
         """
         examples of xml data:
         File:
@@ -372,8 +371,10 @@ class Target:
         <target name="stdout" terminal="stdout"/>
         ```
         """
-        if isinstance(data, str):
-            data = ElementTree.parse(data).getroot()
+        if isinstance(fpathOrData, str):
+            data = ElementTree.parse(fpathOrData).getroot()
+        else:
+            data = fpathOrData
         
         result = None
         
@@ -406,10 +407,10 @@ class Target:
     def __repr__(self) -> str:
         return f"Target({self.__name})"
     
-    def __getitem__(self, key: str) -> any:
+    def __getitem__(self, key: str) -> Any:
         return self.properties[key]
     
-    def __setitem__(self, key: str, value: any):
+    def __setitem__(self, key: str, value: Any):
         self.properties[key] = value
         
     def __delitem__(self, key: str):
@@ -452,7 +453,7 @@ class Target:
     
     @staticmethod
     def list() -> list['Target']:
-        return list(Target.__instances.keys())
+        return list(Target.__instances.values())
     
     @staticmethod
     def clear():
@@ -464,10 +465,7 @@ class Target:
         
     @staticmethod
     def unregister(target):
-        if isinstance(target, str):
-            name = target
-        else:
-            name = target.name
+        name = target if isinstance(target, str) else target.name
         if Target.exist(name):
             del Target.__instances[name]
         else:
@@ -489,7 +487,7 @@ class LoggerConfig:
         self.showProcessName = False
         
     @staticmethod
-    def fromJson(data : str|dict, filePath : str = None) -> 'LoggerConfig':
+    def fromJson(fpathOrData : str|dict, filePath : str|None = None) -> 'LoggerConfig':
         """
         examples of json data:
         ```json
@@ -508,29 +506,28 @@ class LoggerConfig:
             ]
         }
         """
-        if isinstance(data, str):
-            filePath = data
-            with open(data, 'r') as f:
-                data = loads(f.read()) #type: dict
-            
-        elif filePath is None:
-            raise ValueError("The filePath must be provided when the data is a dict")
-        
+        if isinstance(fpathOrData, str):
+            filePath = fpathOrData
+            with open(filePath, 'r') as f:
+                data = loads(f.read())
+        else:
+            data = fpathOrData
+            if filePath is None:
+                raise ValueError("The filePath must be provided when the data is a dict")
+
         filePath = os.path.abspath(filePath)
         folderPath = os.path.dirname(filePath)
-        
-        sensitiveDatas = []
+
         targets = []
-        
-        if 'sensitiveDatas' in data:
-            sensitiveDatas = data['sensitiveDatas']
+
+        sensitiveDatas = data['sensitiveDatas'] if 'sensitiveDatas' in data else []
         if 'targets' in data:
             targets = [Target.fromJson(target) for target in data['targets']]
-        
+
         return LoggerConfig(sensitiveDatas, targets)
     
     @staticmethod
-    def fromXml(data : str|ElementTree.Element, filePath : str = None) -> 'LoggerConfig':
+    def fromXml(data : str|ElementTree.Element, filePath : str|None = None) -> 'LoggerConfig':
         """
         examples of xml data:
         ```xml
@@ -558,9 +555,9 @@ class LoggerConfig:
         targets = []
         
         if data.find('sensitiveDatas') is not None:
-            sensitiveDatas = [sensitiveData.text for sensitiveData in data.find('sensitiveDatas')]
+            sensitiveDatas = [sensitiveData.text for sensitiveData in data.find('sensitiveDatas')] #type: ignore
         if data.find('targets') is not None:
-            targets = [Target.fromXml(target) for target in data.find('targets')]
+            targets = [Target.fromXml(target) for target in data.find('targets')] #type: ignore
         
         return LoggerConfig(sensitiveDatas, targets)
     
@@ -597,7 +594,7 @@ class LoggerConfig:
         masterGroup.add_argument('--config', '-c', type=str, help='The path to the logger configuration file (json or xml)')
         
         masterGroup.add_argument('--sensitiveDatas', '-d', nargs='+', help='The list of sensitive datas to hide in the logs, separated by spaces')
-        masterGroup.add_argument('--addTarget', '-t', action="append", nargs='+', help='Add a target to the logger, the arguments are the target configuration (in order: target (stdout, stderr or filename), level (deep-debug, debug, info, warning, error, critical), sensitiveMode (hide, show), sensitiveDatas (list of sensitive datas to hide), name) All arguments are optional exept the target')
+        masterGroup.add_argument('--addTarget', '-t', action="append", nargs='+', help='Add a target to the logger, the arguments are the target configuration (in order: target (stdout, stderr or filename), level (deep-debug, debug, info, warning, error, critical), sensitiveMode (hide, show), sensitiveDatas (list of sensitive datas to hide), name) All arguments are optional except the target')
                 
         return masterGroup
     
@@ -632,7 +629,7 @@ class LoggerConfig:
                 else:
                     self.targets.append(target)
     
-    def __getitem__(self, key: str) -> any:
+    def __getitem__(self, key: str) -> Any:
         match key:
             case 'sensitiveDatas':
                 return self.sensitiveDatas
@@ -645,7 +642,7 @@ class LoggerConfig:
             case _:
                 raise KeyError(f"Parameter {key} not found")
             
-    def __setitem__(self, key: str, value: any):
+    def __setitem__(self, key: str, value: Any):
         match key:
             case 'sensitiveDatas':
                 self.sensitiveDatas = value

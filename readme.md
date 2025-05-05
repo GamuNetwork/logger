@@ -1,5 +1,7 @@
 # <div align="center">Gamu Logger - Main Page</div>
 
+## <div align="center">NO LONGER MAINTAINED. THE LOGGER WAS MOVED TO <a href="https://github.com/T0ine34/gamuLogger">https://github.com/T0ine34/gamuLogger</a></div>
+
 ### <div align="center">🏠 Main page | <a href="./python/readme.md">🐍 Python</a> | <a href="./javascript/readme.md">🌐 Javascript</a></div>
 
 ## <div align="center">📚 Table of Contents</div>
